@@ -65,8 +65,17 @@
       "typedRoutes": true
     },
     "extra": {
-      "webUrl": "https://app.livesell.africa"
+      "webUrl": "https://app.livesell.africa",
+      "eas": {
+        "projectId": "cec733e4-38a0-4cab-bf13-f576be781684"
+      },
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      }
     },
-    "description": "Run your live sales, orders and stock from your phone."
+    "description": "Run your live sales, orders and stock from your phone.",
+    "owner": "innovatyou"
   }
 }
