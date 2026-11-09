@@ -98,6 +98,8 @@ curl -fsS https://api…/health/ready
   - It was rehearsed locally on 2026-11-08.
 - **Media (S3/R2):** turn on bucket versioning. Only object keys are in the database.
 
+> cPanel hosting (sell.innovative.ng): see `DEPLOY-CPANEL.md`.
+
 ## Mobile app (seller)
 
 1. **Link the project:** in `apps/mobile`, run `npx eas-cli@latest init`. This creates the Expo project and writes `extra.eas.projectId` (or set `EAS_PROJECT_ID` as an EAS environment variable).

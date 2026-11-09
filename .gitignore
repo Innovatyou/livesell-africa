@@ -8,9 +8,13 @@ apps/api/src/generated/
 coverage/
 .DS_Store
 .next/
+.next-cpanel/
 apps/web/next-env.d.ts
 .claude/settings.local.json
 
 # Firebase service-account keys (FCM v1 push credentials): private keys, never commit. Upload to EAS, then keep offline.
 *firebase-adminsdk*.json
 *service-account*.json
+
+# Build bundles (scripts/package-cpanel.mjs)
+deploy/
