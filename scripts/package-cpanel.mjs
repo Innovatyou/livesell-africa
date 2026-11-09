@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
  * Builds upload bundles for cPanel "Setup Node.js App" (Phusion Passenger):
- *   deploy/cpanel/livesell-api.zip  -> app root of api.<domain>   (startup file: dist/main.js, then "Run NPM Install")
- *   deploy/cpanel/livesell-web.zip  -> app root of <domain>       (startup file: apps/web/server.js, nothing to install)
+ *   deploy/cpanel/livesell-api.zip  -> extract into ~/livesell-api; app root livesell-api/api, startup dist/main.js
+ *   deploy/cpanel/livesell-web.zip  -> extract into ~/livesell-web; app root livesell-web/apps/web, startup server.js
+ * Both carry their node_modules one level above the app root: nothing is installed on the server (the hosting memory
+ * limit and cPanel's installer are avoided), and the cPanel Node.js selector sees no node_modules in the app root.
  *
  * Usage: node scripts/package-cpanel.mjs --api-url https://api.sell.innovative.ng
  * Contains no secrets: the API reads its settings from the environment variables set in cPanel.
@@ -40,7 +42,8 @@ const apiDir = join(root, 'apps', 'api');
 run('npx prisma generate', apiDir);
 run('npx nest build', apiDir);
 const apiOut = join(out, 'api');
-cpSync(join(apiDir, 'dist'), join(apiOut, 'dist'), { recursive: true });
+cpSync(join(apiDir, 'dist'), join(apiOut, 'api', 'dist'), { recursive: true });
+writeFileSync(join(apiOut, 'api', 'package.json'), JSON.stringify({ name: 'livesell-api-app', private: true, main: 'dist/main.js' }, null, 2));
 const apiPkg = JSON.parse(readFileSync(join(apiDir, 'package.json'), 'utf8'));
 const rootPkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 writeFileSync(
@@ -50,7 +53,7 @@ writeFileSync(
       name: 'livesell-api',
       private: true,
       version: apiPkg.version ?? '1.0.0',
-      scripts: { start: 'node dist/main.js' },
+      scripts: { start: 'node api/dist/main.js' },
       engines: { node: '>=22' },
       dependencies: apiPkg.dependencies,
       overrides: rootPkg.overrides ?? {},
@@ -59,8 +62,12 @@ writeFileSync(
     2,
   ),
 );
-// A lockfile of its own, so cPanel's "Run NPM Install" gets the tested versions (no install here: it runs on the server).
+// Runtime dependencies only. All pure JS except argon2, which ships a prebuilt linux-x64 binary (loaded at runtime), so a
+// Windows/macOS install runs on the Linux server. Prisma 7 (adapter-pg) needs no engine binary at runtime.
 run('npm install --package-lock-only --ignore-scripts --no-audit --no-fund', apiOut);
+run('npm ci --omit=dev --ignore-scripts --no-audit --no-fund', apiOut);
+if (!existsSync(join(apiOut, 'node_modules', 'argon2', 'prebuilds', 'linux-x64'))) throw new Error('argon2 linux-x64 prebuild missing');
+rmSync(join(apiOut, 'node_modules', '.bin'), { recursive: true, force: true }); // Windows shims, useless on Linux
 zip(apiOut, join(out, 'livesell-api.zip'));
 
 // ── Web ──

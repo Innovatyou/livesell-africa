@@ -34,11 +34,12 @@ URL is built into the web app.
 ## 3. Upload and extract
 
 In cPanel → File Manager:
-1. Create the folders `livesell-api` and `livesell-web` in your home directory.
+1. Create the folders `livesell-api` and `livesell-web` in your **home directory** (`/home/<user>/`), **not** inside
+   `public_html`. Anything under `public_html` can be served to the public.
 2. Upload each zip into its folder, then right-click → **Extract**.
 
 After extracting you should have:
-- `~/livesell-api/dist/main.js` and `~/livesell-api/package.json`;
+- `~/livesell-api/api/dist/main.js` and `~/livesell-api/node_modules`;
 - `~/livesell-web/apps/web/server.js` and `~/livesell-web/node_modules`.
 
 ## 4. Node.js apps
@@ -50,18 +51,14 @@ per row:
 |---|---|---|
 | Node.js version | 22+ | same |
 | Application mode | Production | Production |
-| Application root | `livesell-api` | `livesell-web/apps/web` |
+| Application root | `livesell-api/api` | `livesell-web/apps/web` |
 | Application URL | `api.sell.innovative.ng` | `sell.innovative.ng` |
 | Startup file | `dist/main.js` | `server.js` |
 | Environment variables | the table below | none |
 
-**API:**
-1. After creating it, click **Run NPM Install**. It installs runtime dependencies only, using the bundled lockfile; it
-   is slow but light on memory.
-2. Click Restart.
-
-**Web:** don't run NPM Install. Its dependencies are in `livesell-web/node_modules`, one level above the app root, which
-keeps the cPanel Node.js selector happy.
+**Never click "Run NPM Install"** for either app. Both zips already contain their packages, in a `node_modules` folder
+one level above the app root, which keeps the cPanel Node.js selector happy. After setting the variables, click
+**Restart**.
 
 **Application mode "Production" sets `NODE_ENV=production`, which refuses test payment keys.** For staging with test
 keys, add `NODE_ENV` = `staging`. If the log still says "test key in production", leave the payment keys out until you
@@ -132,6 +129,5 @@ push receipts. Add a cPanel **Cron Job** every 5 minutes:
 
 1. **Build** on your PC (step 2).
 2. **Migrate** on the server (step 5, without `SEED=1`).
-3. **API:** delete `~/livesell-api/dist`, then upload and extract the new zip. Run NPM Install only if
-   `package-lock.json` changed. Restart.
+3. **API:** delete everything inside `~/livesell-api`, then upload and extract the new zip, and restart.
 4. **Web:** delete everything inside `~/livesell-web`, then upload and extract the new zip, and restart.
