@@ -6,6 +6,7 @@
 #   API_URL      public API address baked into the web app (default https://api.sell.innovative.ng)
 #   ENV_FILE     file with DATABASE_URL for migrations (default ~/.livesell-migrate.env; mode 600, outside the repo)
 #   SKIP_WEB=1   API only (e.g. if the web build runs out of memory on shared hosting)
+#   NEXT_BUILD_FLAGS  default --webpack (Turbopack needs native SWC bindings, unavailable on CloudLinux); "" for Turbopack
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
@@ -50,7 +51,7 @@ fi
 
 if [ "${SKIP_WEB:-0}" != 1 ]; then
   echo "== Building the web app (API: $API_URL)"
-  ( cd apps/web && NEXT_PUBLIC_API_URL="$API_URL" NEXT_TELEMETRY_DISABLED=1 NEXT_DIST_DIR=.next-cpanel "$BIN/next" build )
+  ( cd apps/web && NEXT_PUBLIC_API_URL="$API_URL" NEXT_TELEMETRY_DISABLED=1 NEXT_DIST_DIR=.next-cpanel "$BIN/next" build ${NEXT_BUILD_FLAGS---webpack} )
   SA="apps/web/.next-cpanel/standalone/apps/web"
   rm -rf "$SA/.next-cpanel/static" "$SA/public"
   cp -r apps/web/.next-cpanel/static "$SA/.next-cpanel/static"
