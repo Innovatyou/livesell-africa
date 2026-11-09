@@ -54,6 +54,7 @@ export default function Signup() {
           ))}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text style={{ color: c.ink }}>Registered with CAC</Text><Switch value={registered} onValueChange={setRegistered} /></View>
+        {registered ? <Muted>After sign-up, add your RC/BN number and certificate in More → Business verification.</Muted> : null}
       </Card>
       <Card style={{ gap: 10 }}>
         <Field label="Your full name" value={f.ownerFullName} onChangeText={set('ownerFullName')} autoComplete="name" />

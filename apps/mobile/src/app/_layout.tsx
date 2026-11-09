@@ -48,6 +48,7 @@ function Gate() {
       <Stack.Screen name="settings/delivery" options={{ title: 'Delivery' }} />
       <Stack.Screen name="analytics" options={{ title: 'Analytics' }} />
       <Stack.Screen name="billing" options={{ title: 'Plan & billing' }} />
+      <Stack.Screen name="verification" options={{ title: 'Business verification' }} />
       <Stack.Screen name="orders/[id]" options={{ title: 'Order' }} />
       <Stack.Screen name="live/[id]" options={{ title: 'Live session' }} />
     </Stack>

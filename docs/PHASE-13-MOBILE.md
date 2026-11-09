@@ -155,7 +155,7 @@ Both stores use `africa.livesell.seller`. It matches the package in your `google
 | Billing | Plan and trial, commission this month / not invoiced, open invoices with **Pay now** (opens the secure checkout; the invoice is marked paid only after server verification), overdue warning |
 
 **Still on the web:**
-- payment gateway keys, team and roles, business verification;
+- payment gateway keys, team and roles; business verification with a PDF certificate (photos work in the app: More → Business verification);
 - per-message channel choices, plan changes;
 - products with options (creating variants), CSV import, admin.
 

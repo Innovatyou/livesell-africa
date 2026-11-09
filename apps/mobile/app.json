@@ -46,7 +46,7 @@
         "expo-image-picker",
         {
           "photosPermission": "LiveSell uses your photos so you can add product pictures.",
-          "cameraPermission": "LiveSell uses the camera so you can photograph your products."
+          "cameraPermission": "LiveSell uses the camera so you can photograph your products and your CAC certificate."
         }
       ],
       "expo-web-browser",

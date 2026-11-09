@@ -143,6 +143,9 @@ function RegisterForm() {
               </label>
             ))}
           </div>
+          {f.businessType === 'REGISTERED_BUSINESS' && (
+            <p className="text-[13px] text-ink-3">After sign-up, add your RC/BN number and CAC certificate in Settings → Business verification.</p>
+          )}
           <Field label="Store username" error={show('storeUsername')} hint={<>Your store link: <span className="font-medium text-ink-2">livesell.africa/store/{f.storeUsername || 'yourname'}</span></>}>
             {(p) => <Input {...p} autoCapitalize="none" spellCheck={false} value={f.storeUsername} onChange={(e) => { setSlugTouched(true); set('storeUsername', e.target.value.toLowerCase()); }} />}
           </Field>

@@ -8,6 +8,7 @@ import { disablePush, enablePush, pushState, type PushState } from '@/lib/push';
 
 const LINKS = [
   { label: 'Store settings', href: '/settings/store', permission: 'store:manage' },
+  { label: 'Business verification (CAC)', href: '/verification', permission: 'store:manage' },
   { label: 'Delivery & couriers', href: '/settings/delivery', permission: 'orders:read' },
   { label: 'Analytics', href: '/analytics', permission: 'reports:read' },
   { label: 'Plan & billing', href: '/billing', permission: 'billing:manage' },
