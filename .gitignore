@@ -18,3 +18,6 @@ apps/web/next-env.d.ts
 
 # Build bundles (scripts/package-cpanel.mjs)
 deploy/
+# Passenger restart markers (cPanel)
+apps/*/tmp/
+apps/web/.next-cpanel/
