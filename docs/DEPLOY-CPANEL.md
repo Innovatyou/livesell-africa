@@ -1,54 +1,71 @@
-# Deploying on cPanel (Git Version Control + Terminal)
+# Deploying on cPanel (build on your PC, upload zips)
 
 Target: web at **https://sell.innovative.ng**, API at **https://api.sell.innovative.ng**, both as cPanel Node.js apps
-(Phusion Passenger), built on the server from the GitHub repo. This is a lighter alternative to the Docker setup in
-`DEPLOYMENT.md`.
+(Phusion Passenger). The hosting account's memory limit (CloudLinux LVE) kills `nest build` and `next build`, so:
+- the apps are **built on your PC** and uploaded as zips;
+- the server only runs them, plus migrations from the Git checkout (light on memory).
 
 ## What cPanel doesn't provide
 
 | Need | Use |
 |---|---|
-| **Node 22+** | Pick 22 (or higher) in "Setup Node.js App". If the host only offers older versions, ask them to add 22 |
-| **PostgreSQL 13+ (16 preferred)** | A managed database, e.g. Neon or Supabase (EU region, closest to Nigeria), or the host's PostgreSQL if 13+ |
-| **Redis** (BullMQ jobs, rate limits) | Redis Cloud (free 30 MB plan to start), or the host's Redis. Avoid per-command-billed Redis: BullMQ is chatty |
-| **Object storage** | The AWS S3 bucket (or Cloudflare R2). Not MinIO/localhost; the API refuses it |
-
-Shared hosts sometimes block outgoing connections to ports like 5432 (Postgres) and 6379 (Redis). Step 3 checks this.
+| **Node 22+** | "Setup Node.js App" (24 is fine) |
+| **PostgreSQL 13+** | A managed database (Neon or Supabase, EU region) or the host's PostgreSQL |
+| **Redis** (BullMQ jobs, rate limits) | Redis Cloud (free 30 MB to start) or the host's Redis |
+| **Object storage** | The AWS S3 bucket (or Cloudflare R2), not MinIO/localhost |
 
 ## 1. Subdomains and SSL
 
 1. cPanel → Domains: create `sell.innovative.ng` and `api.sell.innovative.ng`.
 2. cPanel → SSL/TLS Status: run AutoSSL so both have certificates.
 
-## 2. Clone the repo
+## 2. Build the zips (on your PC)
 
-cPanel → **Git Version Control** → Create:
-- Clone URL: `https://github.com/Innovatyou/livesell-africa.git`
-- Repository path: `repositories/livesell-africa`
-- Name: `livesell-africa`
+From the repo root in PowerShell:
 
-The repo is public, so no key is needed. If you make it private, add cPanel's SSH key (SSH Access → Manage keys) to
-GitHub → repo → Settings → Deploy keys, read-only, and clone `git@github.com:Innovatyou/livesell-africa.git`.
+```powershell
+git pull
+node scripts/package-cpanel.mjs --api-url https://api.sell.innovative.ng
+```
 
-## 3. Create the two Node.js apps
+This creates `deploy\cpanel\livesell-api.zip` and `deploy\cpanel\livesell-web.zip` (git-ignored, no secrets). The API
+URL is built into the web app.
 
-cPanel → **Setup Node.js App** → Create, once per app:
+## 3. Upload and extract
+
+In cPanel → File Manager:
+1. Create the folders `livesell-api` and `livesell-web` in your home directory.
+2. Upload each zip into its folder, then right-click → **Extract**.
+
+After extracting you should have:
+- `~/livesell-api/dist/main.js` and `~/livesell-api/package.json`;
+- `~/livesell-web/apps/web/server.js` and `~/livesell-web/node_modules`.
+
+## 4. Node.js apps
+
+cPanel → **Setup Node.js App**. If you created apps earlier with other roots, delete them or edit their root. Create one
+per row:
 
 | Field | API | Web |
 |---|---|---|
 | Node.js version | 22+ | same |
 | Application mode | Production | Production |
-| Application root | `repositories/livesell-africa/apps/api` | `repositories/livesell-africa/apps/web/.next-cpanel/standalone/apps/web` |
+| Application root | `livesell-api` | `livesell-web/apps/web` |
 | Application URL | `api.sell.innovative.ng` | `sell.innovative.ng` |
 | Startup file | `dist/main.js` | `server.js` |
 | Environment variables | the table below | none |
 
-Don't click "Run NPM Install" for either app; the build script installs everything. The web app's folder only exists
-after the first build. If cPanel refuses to create the app before then, create the web app after step 5.
+**API:**
+1. After creating it, click **Run NPM Install**. It installs runtime dependencies only, using the bundled lockfile; it
+   is slow but light on memory.
+2. Click Restart.
+
+**Web:** don't run NPM Install. Its dependencies are in `livesell-web/node_modules`, one level above the app root, which
+keeps the cPanel Node.js selector happy.
 
 **Application mode "Production" sets `NODE_ENV=production`, which refuses test payment keys.** For staging with test
-keys, add a variable `NODE_ENV` = `staging`. If the log still says "test key in production", leave the payment keys out
-until you have live ones.
+keys, add `NODE_ENV` = `staging`. If the log still says "test key in production", leave the payment keys out until you
+have live ones.
 
 **API environment variables.** Never put these in git:
 
@@ -69,70 +86,37 @@ until you have live ones.
 | `PUSH_ENABLED` | `true` |
 | `ALERT_WEBHOOK_URL` | optional |
 
-Generate the secrets in the Terminal (or on your PC) and paste each value:
+Generate the secrets and paste each value:
 
 ```bash
 node -e "const c=require('crypto');console.log('JWT_ACCESS_SECRET='+c.randomBytes(48).toString('base64'));console.log('TOKEN_HASH_SECRET='+c.randomBytes(48).toString('base64'));console.log('DATA_ENCRYPTION_KEY='+c.randomBytes(32).toString('base64'))"
 ```
 
-## 4. Terminal: Node 22 and the connection check
+## 5. Migrations (cPanel Terminal)
 
-Open cPanel → **Terminal**. At the top of the API app's page, "Setup Node.js App" shows the command that enters its
-environment. Copy and run it; it looks like:
-
-```bash
-source ~/nodevenv/repositories/livesell-africa/apps/api/22/bin/activate && cd ~/repositories/livesell-africa/apps/api
-cd ~/repositories/livesell-africa
-node -v    # must be v22 or higher
-```
-
-Store the database URL for migrations in a private file outside the repo. The `read` command doesn't echo, so the URL
-doesn't end up in your shell history:
+This uses the Git checkout at `~/repositories/livesell-africa` (Git Version Control) and `~/.livesell-migrate.env`,
+which holds `DATABASE_URL`, mode 600. Activate Node first: copy the `source …/bin/activate` command shown on any
+Node.js app's page.
 
 ```bash
-read -rsp 'DATABASE_URL: ' u && printf 'DATABASE_URL=%s\n' "$u" > ~/.livesell-migrate.env && chmod 600 ~/.livesell-migrate.env && unset u; echo
+cd ~/repositories/livesell-africa && git pull
+SEED=1 bash scripts/cpanel-migrate.sh     # SEED=1 only the first time
 ```
 
-Check that the server can reach the database and Redis. Use your hosts and ports:
-
-```bash
-node -e "const n=require('net');for(const [h,p] of [['DB_HOST',5432],['REDIS_HOST',6379]]){const s=n.connect(p,h,()=>{console.log('ok',h,p);s.end()});s.on('error',e=>console.log('BLOCKED',h,p,e.code));s.setTimeout(5000,()=>{console.log('TIMEOUT',h,p);s.destroy()})}"
-```
-
-If either is blocked, ask the host to open the port. Or use the host's own PostgreSQL/Redis.
-
-## 5. Build, migrate, start
-
-```bash
-SEED=1 bash scripts/cpanel-build.sh      # first time only: SEED=1 loads plans, permissions, settings
-```
-
-The script:
-- installs dependencies;
-- builds the API;
-- runs `prisma migrate deploy` with `~/.livesell-migrate.env`;
-- builds the web app with `https://api.sell.innovative.ng` built in;
-- restarts both apps.
-
-Then open `https://api.sell.innovative.ng/health/ready` (should say `ok`) and https://sell.innovative.ng.
-
-- If the API won't start, the reason is in `repositories/livesell-africa/apps/api/stderr.log`. The startup check lists
-  every bad setting at once.
-- If the **web build is killed** (shared hosting memory limits), run `SKIP_WEB=1 bash scripts/cpanel-build.sh`. Then
-  build the web app on your PC (`node scripts/package-cpanel.mjs`), upload `deploy/cpanel/livesell-web.zip`, and extract
-  it into a separate web app root.
+Then, in Setup Node.js App, restart the API and check `https://api.sell.innovative.ng/health/ready` (should say `ok`).
+- If the API won't start, the reason is in `~/livesell-api/stderr.log`. The startup check lists every bad setting at
+  once.
+- If Postgres (5432) or Redis (6379) can't be reached, the host may block those outgoing ports. Ask them to open them,
+  or use their own PostgreSQL/Redis.
 
 ## 6. Keep the API awake (background jobs)
 
-Passenger stops an app after it has been idle for a while. While it's stopped, no jobs run: stock-hold expiry, payment
-reconciliation, reminders, push receipts. Add a cPanel **Cron Job** every 5 minutes:
+Passenger stops an idle app. While it's stopped, no jobs run: stock-hold expiry, payment reconciliation, reminders,
+push receipts. Add a cPanel **Cron Job** every 5 minutes:
 
 ```
 */5 * * * * curl -fsS https://api.sell.innovative.ng/health > /dev/null 2>&1
 ```
-
-Shared hosting can still restart apps under memory/CPU limits. Watch `/admin` → Overview → Problems. If jobs fall
-behind, move the API to a VPS (`DEPLOYMENT.md`); the web app can stay on cPanel.
 
 ## 7. After it's up
 
@@ -146,14 +130,8 @@ behind, move the API to a VPS (`DEPLOYMENT.md`); the web app can stay on cPanel.
 
 ## Every release
 
-1. Git Version Control → `livesell-africa` → Manage → Pull or Deploy → **Update from Remote**.
-2. In the Terminal, with Node 22 active (step 4), from `~/repositories/livesell-africa` run:
-   ```bash
-   bash scripts/cpanel-build.sh
-   ```
-   It migrates before restarting.
-
-**Alternative without a server build:** `node scripts/package-cpanel.mjs` on your PC creates upload zips in
-`deploy/cpanel/`:
-- API zip: startup `dist/main.js`, then click Run NPM Install;
-- web zip: startup `apps/web/server.js`.
+1. **Build** on your PC (step 2).
+2. **Migrate** on the server (step 5, without `SEED=1`).
+3. **API:** delete `~/livesell-api/dist`, then upload and extract the new zip. Run NPM Install only if
+   `package-lock.json` changed. Restart.
+4. **Web:** delete everything inside `~/livesell-web`, then upload and extract the new zip, and restart.
