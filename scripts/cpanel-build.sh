@@ -24,11 +24,21 @@ BIN="$ROOT/node_modules/.bin"
 # The selector may have put a node_modules symlink (to the virtualenv) in an app root; the workspace install owns these.
 for d in apps/api apps/web; do [ -L "$d/node_modules" ] && rm "$d/node_modules"; done
 
+# npm 11 runs install scripts only for allowed packages: Prisma engines (migrate), argon2 + msgpackr (native, prebuilt).
+SCRIPTS="@prisma/engines,prisma,argon2,msgpackr-extract"
 echo "== Installing dependencies (API + web)"
-npm_ ci --include=dev --no-audit --no-fund
+if [ "${FORCE_INSTALL:-0}" != 1 ] && [ node_modules/.package-lock.json -nt package-lock.json ]; then
+  echo "   up to date (lockfile unchanged); FORCE_INSTALL=1 to reinstall"
+else
+  npm_ ci --include=dev --no-audit --no-fund --allow-scripts="$SCRIPTS"
+fi
+npm_ rebuild --allow-scripts="$SCRIPTS" @prisma/engines prisma argon2 msgpackr-extract
 
 echo "== Building the API"
-( cd apps/api && "$BIN/prisma" generate && "$BIN/nest" build )
+# prisma.config.ts requires DATABASE_URL; `generate` never connects, so a placeholder is enough when none is stored.
+DB_URL_FOR_BUILD="postgresql://build:build@localhost:5432/build"
+if [ -f "$ENV_FILE" ]; then DB_URL_FOR_BUILD="$(. "$ENV_FILE"; printf '%s' "${DATABASE_URL:-$DB_URL_FOR_BUILD}")"; fi
+( cd apps/api && DATABASE_URL="$DB_URL_FOR_BUILD" "$BIN/prisma" generate && "$BIN/nest" build )
 
 echo "== Database migrations"
 if [ -f "$ENV_FILE" ]; then
