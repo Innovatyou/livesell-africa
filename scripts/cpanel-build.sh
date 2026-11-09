@@ -15,23 +15,33 @@ ENV_FILE="${ENV_FILE:-$HOME/.livesell-migrate.env}"
 major="$(node -p 'process.versions.node.split(".")[0]')"
 [ "$major" -ge 22 ] || { echo "Node $(node -v) is too old; activate Node 22 first (see docs/DEPLOY-CPANEL.md)"; exit 1; }
 
+# CloudLinux's nodevenv `npm` wrapper forces --prefix into the virtualenv; use the real npm CLI with the repo as prefix.
+unset NPM_CONFIG_PREFIX npm_config_prefix
+NPM_CLI="$(dirname "$(node -p 'process.execPath')")/../lib/node_modules/npm/bin/npm-cli.js"
+[ -f "$NPM_CLI" ] || NPM_CLI="$(command -v npm)"
+npm_() { node "$NPM_CLI" --prefix "$ROOT" "$@"; }
+BIN="$ROOT/node_modules/.bin"
+# The selector may have put a node_modules symlink (to the virtualenv) in an app root; the workspace install owns these.
+for d in apps/api apps/web; do [ -L "$d/node_modules" ] && rm "$d/node_modules"; done
+
 echo "== Installing dependencies (API + web)"
-npm ci --include=dev --no-audit --no-fund
+npm_ ci --include=dev --no-audit --no-fund
 
 echo "== Building the API"
-( cd apps/api && npx prisma generate && npx nest build )
+( cd apps/api && "$BIN/prisma" generate && "$BIN/nest" build )
 
 echo "== Database migrations"
 if [ -f "$ENV_FILE" ]; then
   # Only DATABASE_URL is needed; the file is never printed.
-  ( set -a; . "$ENV_FILE"; set +a; cd apps/api && npx prisma migrate deploy && { [ "${SEED:-0}" = 1 ] && npm run seed || true; } )
+  ( set -a; . "$ENV_FILE"; set +a; cd apps/api && "$BIN/prisma" migrate deploy
+    if [ "${SEED:-0}" = 1 ]; then "$BIN/ts-node" prisma/seed.ts; fi )
 else
   echo "   skipped: $ENV_FILE not found (create it with DATABASE_URL=... to migrate from here)"
 fi
 
 if [ "${SKIP_WEB:-0}" != 1 ]; then
   echo "== Building the web app (API: $API_URL)"
-  ( cd apps/web && NEXT_PUBLIC_API_URL="$API_URL" NEXT_TELEMETRY_DISABLED=1 NEXT_DIST_DIR=.next-cpanel npx next build )
+  ( cd apps/web && NEXT_PUBLIC_API_URL="$API_URL" NEXT_TELEMETRY_DISABLED=1 NEXT_DIST_DIR=.next-cpanel "$BIN/next" build )
   SA="apps/web/.next-cpanel/standalone/apps/web"
   rm -rf "$SA/.next-cpanel/static" "$SA/public"
   cp -r apps/web/.next-cpanel/static "$SA/.next-cpanel/static"
