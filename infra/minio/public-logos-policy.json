@@ -1,0 +1,16 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadStorefrontMediaOnly",
+      "Effect": "Allow",
+      "Principal": { "AWS": ["*"] },
+      "Action": ["s3:GetObject"],
+      "Resource": [
+        "arn:aws:s3:::livesell-media/tenants/*/logos/*",
+        "arn:aws:s3:::livesell-media/tenants/*/covers/*",
+        "arn:aws:s3:::livesell-media/tenants/*/products/*"
+      ]
+    }
+  ]
+}

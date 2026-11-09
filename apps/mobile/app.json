@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "LiveSell",
+    "slug": "livesell-seller",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "africa.livesell.seller",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0e7a4d",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "africa.livesell.seller"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0e7a4d",
+          "defaultChannel": "orders"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LiveSell uses your photos so you can add product pictures.",
+          "cameraPermission": "LiveSell uses the camera so you can photograph your products."
+        }
+      ],
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0e7a4d"
+        }
+      ]
+    ],
+    "scheme": "livesell",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "webUrl": "https://app.livesell.africa"
+    },
+    "description": "Run your live sales, orders and stock from your phone."
+  }
+}

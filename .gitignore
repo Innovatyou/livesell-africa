@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+apps/api/src/generated/
+*.tsbuildinfo
+coverage/
+.DS_Store
+.next/
+apps/web/next-env.d.ts
+.claude/settings.local.json
+
+# Firebase service-account keys (FCM v1 push credentials): private keys, never commit. Upload to EAS, then keep offline.
+*firebase-adminsdk*.json
+*service-account*.json

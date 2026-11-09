@@ -1,0 +1,9 @@
+{
+  "cli": { "appVersionSource": "remote" },
+  "build": {
+    "development": { "developmentClient": true, "distribution": "internal", "env": { "EXPO_PUBLIC_API_URL": "https://api.staging.livesell.africa" } },
+    "preview": { "distribution": "internal", "env": { "EXPO_PUBLIC_API_URL": "https://api.staging.livesell.africa" } },
+    "production": { "autoIncrement": true, "env": { "EXPO_PUBLIC_API_URL": "https://api.livesell.africa" } }
+  },
+  "submit": { "production": {} }
+}

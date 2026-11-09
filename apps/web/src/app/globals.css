@@ -1,0 +1,75 @@
+@import 'tailwindcss';
+
+/*
+ * LiveSell design tokens (MASTER-SPEC §24): clean light surfaces, deep charcoal text,
+ * a professional green accent, subtle borders, rounded cards, consistent spacing.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-canvas: #f6f7f6;
+  --color-surface: #ffffff;
+  --color-sunken: #f1f3f1;
+  --color-line: #e5e8e5;
+  --color-line-strong: #d3d8d4;
+
+  --color-ink: #121815;
+  --color-ink-2: #3f4944;
+  --color-ink-3: #6b7570;
+  --color-ink-4: #98a19c;
+
+  --color-brand-50: #edf8f2;
+  --color-brand-100: #d4f0e0;
+  --color-brand-200: #a8e0c2;
+  --color-brand-500: #16975e;
+  --color-brand-600: #0e7a4d;
+  --color-brand-700: #0b6340;
+  --color-brand-800: #094d33;
+  --color-brand-900: #07392a;
+
+  --color-good: #0e7a4d;
+  --color-good-bg: #edf8f2;
+  --color-warn: #8a5a00;
+  --color-warn-bg: #fdf5e3;
+  --color-bad: #b42318;
+  --color-bad-bg: #fdf0ee;
+  --color-info: #1d4ed8;
+  --color-info-bg: #eef3fe;
+
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  --shadow-card: 0 1px 2px rgb(18 24 21 / 0.04), 0 1px 1px rgb(18 24 21 / 0.02);
+  --shadow-pop: 0 8px 24px rgb(18 24 21 / 0.08), 0 2px 6px rgb(18 24 21 / 0.04);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-brand-100);
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "livesell-africa",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "api:dev": "npm run start:dev -w apps/api",
+    "api:test": "npm test -w apps/api",
+    "api:test:e2e": "npm run test:e2e -w apps/api",
+    "db:migrate": "npm run prisma:migrate -w apps/api",
+    "web:dev": "npm run dev -w apps/web",
+    "web:build": "npm run build -w apps/web",
+    "web:test": "npm test -w apps/web"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "overrides": {
+    "@nestjs/platform-express": {
+      "multer": "2.5.0"
+    }
+  }
+}

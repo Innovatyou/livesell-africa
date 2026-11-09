@@ -1,0 +1,1551 @@
+// LiveSell Africa — core data model
+// Conventions:
+//  * UUID primary keys everywhere.
+//  * Money is stored as BigInt minor units (kobo for NGN) + ISO-4217 currency. Never Float.
+//  * Every tenant-owned table carries tenantId, indexed, and is accessed only via tenant-scoped repositories.
+//  * snake_case table/column names in Postgres, camelCase in TypeScript.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum PlatformRole {
+  NONE
+  PLATFORM_ADMIN
+  PLATFORM_SUPPORT
+}
+
+enum TenantStatus {
+  ACTIVE
+  TRIAL
+  SUSPENDED
+  CLOSED
+}
+
+enum BusinessType {
+  INDIVIDUAL
+  REGISTERED_BUSINESS
+}
+
+enum MemberStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+/// How a seller pays LiveSell: a fixed subscription fee, or a commission on each verified sale (no fixed fee).
+enum PricingModel {
+  SUBSCRIPTION
+  COMMISSION
+}
+
+enum SalesInquiryStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CLOSED
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum InvoiceKind {
+  TRIAL_CONVERSION
+  RENEWAL
+  UPGRADE
+  REACTIVATION
+  /// Monthly invoice for commission on sales the seller collected directly (own gateway key, bank transfer).
+  COMMISSION
+}
+
+enum CourierKind {
+  RIDER
+  COMPANY
+}
+
+enum ReportFrequency {
+  WEEKLY
+  MONTHLY
+}
+
+enum SubscriptionEventType {
+  TRIAL_STARTED
+  PLAN_CHANGED
+  UPGRADE_REQUESTED
+  DOWNGRADE_SCHEDULED
+  PENDING_CHANGE_CANCELLED
+  CANCEL_SCHEDULED
+  RESUMED
+  INVOICE_ISSUED
+  INVOICE_VOIDED
+  INVOICE_PAID
+  TRIAL_ENDED
+  RENEWAL_DUE
+  EXPIRED
+  CANCELLED
+  REACTIVATED
+  REMINDER_SENT
+  RENEWED
+}
+
+enum BusinessVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum InventoryMovementType {
+  RESTOCK
+  ADJUSTMENT
+  RESERVATION
+  RELEASE
+  SALE
+  RETURN
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAYMENT_VERIFICATION
+  PAID
+  PROCESSING
+  READY_FOR_DISPATCH
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  AWAITING_VERIFICATION
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum FulfilmentStatus {
+  UNFULFILLED
+  PROCESSING
+  READY
+  DISPATCHED
+  DELIVERED
+  RETURNED
+}
+
+enum ChannelType {
+  TIKTOK_LIVE
+  INSTAGRAM_LIVE
+  FACEBOOK_LIVE
+  YOUTUBE_LIVE
+  WHATSAPP
+  STOREFRONT
+  MANUAL
+  OTHER
+}
+
+enum LiveSessionStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+enum PaymentProviderCode {
+  PAYSTACK
+  FLUTTERWAVE
+  BACHS
+  BANK_TRANSFER
+}
+
+enum SettlementMode {
+  DIRECT
+  SPLIT
+  BANK_TRANSFER
+}
+
+enum TransactionPurpose {
+  ORDER
+  SUBSCRIPTION
+}
+
+enum TransactionStatus {
+  INITIALIZED
+  PENDING
+  SUCCEEDED
+  FAILED
+  ABANDONED
+  REVERSED
+}
+
+enum SettlementStatus {
+  NOT_APPLICABLE
+  PENDING
+  SETTLED
+  FAILED
+}
+
+enum RefundStatus {
+  REQUESTED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  REVENUE
+  EXPENSE
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+enum NotificationChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum DeliveryMethod {
+  PICKUP
+  SELLER_DELIVERY
+  THIRD_PARTY
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  RETURNED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum WebhookProcessingStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum VerificationPurpose {
+  EMAIL_VERIFY
+  PHONE_VERIFY
+  PASSWORD_RESET
+}
+
+// ─────────────────────── Identity & tenancy ───────────────────────
+
+model User {
+  id              String       @id @default(uuid()) @db.Uuid
+  email           String       @unique
+  phone           String?      @unique
+  passwordHash    String       @map("password_hash")
+  fullName        String       @map("full_name")
+  status          UserStatus   @default(PENDING_VERIFICATION)
+  platformRole    PlatformRole @default(NONE) @map("platform_role")
+  emailVerifiedAt DateTime?    @map("email_verified_at")
+  phoneVerifiedAt DateTime?    @map("phone_verified_at")
+  mfaSecretEnc    String?      @map("mfa_secret_enc") // MFA-ready; encrypted at rest
+  mfaEnabled      Boolean      @default(false) @map("mfa_enabled")
+  lastLoginAt     DateTime?    @map("last_login_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  memberships   TenantMember[]
+  deviceTokens DeviceToken[]
+  refreshTokens RefreshToken[]
+  verifications VerificationToken[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  familyId   String    @map("family_id") @db.Uuid // rotation chain; whole family revoked on reuse
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by") @db.Uuid
+  userAgent  String?   @map("user_agent")
+  ip         String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model VerificationToken {
+  id         String              @id @default(uuid()) @db.Uuid
+  userId     String              @map("user_id") @db.Uuid
+  purpose    VerificationPurpose
+  tokenHash  String              @unique @map("token_hash")
+  expiresAt  DateTime            @map("expires_at")
+  consumedAt DateTime?           @map("consumed_at")
+  attempts   Int                 @default(0) // failed guesses; short numeric codes (phone OTP) lock after a few
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@map("verification_tokens")
+}
+
+model Tenant {
+  id               String       @id @default(uuid()) @db.Uuid
+  slug             String       @unique // store username → livesell.africa/store/:slug
+  businessName     String       @map("business_name")
+  businessType     BusinessType @default(INDIVIDUAL) @map("business_type")
+  businessCategory String?      @map("business_category")
+  email            String
+  phone            String
+  country          String       @default("NG") @db.Char(2)
+  state            String?
+  city             String?
+  address          String?
+  defaultCurrency  String       @default("NGN") @map("default_currency") @db.Char(3)
+  status           TenantStatus @default(TRIAL)
+  verifiedAt       DateTime?    @map("verified_at")
+  termsAcceptedAt  DateTime     @map("terms_accepted_at")
+  privacyAcceptedAt DateTime    @map("privacy_accepted_at")
+  termsVersion     String?      @map("terms_version") // version of the documents accepted at registration
+  privacyVersion   String?      @map("privacy_version")
+  customDomain     String?      @unique @map("custom_domain")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  members              TenantMember[]
+  roles                Role[]
+  subscriptions        Subscription[]
+  products             Product[]
+  categories           ProductCategory[]
+  customers            Customer[]
+  orders               Order[]
+  liveSessions         LiveSession[]
+  salesChannels        SalesChannel[]
+  paymentAccounts      SellerPaymentAccount[]
+  transactions         PaymentTransaction[]
+  bankAccounts         BankAccount[]
+  virtualAccounts      VirtualAccount[]
+  notifications        Notification[]
+  notificationUsage    NotificationUsage[]
+  outboxEvents         OutboxEvent[]
+  notificationPreference NotificationPreference?
+  whatsappConversations WhatsappConversation[]
+  storefront           StorefrontSettings?
+  deliveryZones        DeliveryZone[]
+  deliveryOrders       DeliveryOrder[]
+  couriers             Courier[]
+  reportSchedules      ReportSchedule[]
+  invitations          StaffInvitation[]
+  auditLogs            AuditLog[]
+  inventoryMovements   InventoryMovement[]
+  settlements          Settlement[]
+  affiliateAccounts    AffiliateAccount[]
+  refunds              PaymentRefund[]
+  subscriptionEvents   SubscriptionEvent[]
+  businessVerifications BusinessVerification[]
+
+  @@index([status])
+  @@map("tenants")
+}
+
+model Permission {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique // e.g. "products:write"
+  description String?
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+/// Roles are per-tenant so sellers can customise later; system roles are seeded per tenant.
+model Role {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String // OWNER | STORE_MANAGER | SALES_ASSISTANT | LIVE_MODERATOR | custom
+  name      String
+  isSystem  Boolean  @default(false) @map("is_system")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  members     TenantMember[]
+
+  @@unique([tenantId, key])
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model TenantMember {
+  id        String       @id @default(uuid()) @db.Uuid
+  tenantId  String       @map("tenant_id") @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  roleId    String       @map("role_id") @db.Uuid
+  status    MemberStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  liveSessionsModerated LiveSessionModerator[]
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("tenant_members")
+}
+
+model StaffInvitation {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  email      String
+  roleKey    String           @map("role_key")
+  tokenHash  String           @unique @map("token_hash")
+  status     InvitationStatus @default(PENDING)
+  invitedBy  String           @map("invited_by") @db.Uuid
+  expiresAt  DateTime         @map("expires_at")
+  acceptedAt DateTime?        @map("accepted_at")
+  acceptedBy String?          @map("accepted_by") @db.Uuid
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, email])
+  @@map("staff_invitations")
+}
+
+/// Optional business verification (registered businesses). Reviewed by platform staff until a verification
+/// provider is integrated (Veltrix, Phase 8). The document lives in private object storage.
+model BusinessVerification {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  tenantId           String                     @map("tenant_id") @db.Uuid
+  status             BusinessVerificationStatus @default(PENDING)
+  registeredName     String                     @map("registered_name")
+  registrationType   String                     @map("registration_type") // CAC_RC | CAC_BN | OTHER
+  registrationNumber String                     @map("registration_number")
+  documentKey        String                     @map("document_key")
+  submittedBy        String                     @map("submitted_by") @db.Uuid
+  reviewedBy         String?                    @map("reviewed_by") @db.Uuid
+  reviewedAt         DateTime?                  @map("reviewed_at")
+  rejectionReason    String?                    @map("rejection_reason")
+  /// Automated registry check (Veltrix Verify, CAC/TIN) — advice for the reviewer, never an approval by itself.
+  automatedCheck     Json?                      @map("automated_check")
+  automatedCheckedAt DateTime?                  @map("automated_checked_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@map("business_verifications")
+}
+
+// ─────────────────────── SaaS billing ───────────────────────
+
+model SubscriptionPlan {
+  id                String   @id @default(uuid()) @db.Uuid
+  code              String   @unique // STARTER | PROFESSIONAL | BUSINESS | ENTERPRISE
+  name              String
+  description       String?
+  currency          String   @default("NGN") @db.Char(3)
+  monthlyPriceMinor BigInt?  @map("monthly_price_minor") // null => custom pricing
+  annualPriceMinor  BigInt?  @map("annual_price_minor")
+  trialDays         Int      @default(14) @map("trial_days")
+  limits            Json // { products, ordersPerMonth, staff, paymentGateways, ... }
+  features          Json // { whatsappNotifications: true, analytics: "basic", ... }
+  isActive          Boolean  @default(true) @map("is_active")
+  isPublic          Boolean  @default(true) @map("is_public")
+  sortOrder         Int      @default(0) @map("sort_order")
+  /// COMMISSION plans have zero fixed prices and charge commissionBps on each verified sale instead.
+  pricingModel      PricingModel @default(SUBSCRIPTION) @map("pricing_model")
+  commissionBps     Int?     @map("commission_bps")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  subscriptions        Subscription[]        @relation("SubscriptionPlan")
+  pendingSubscriptions Subscription[]        @relation("SubscriptionPendingPlan")
+  invoices             SubscriptionInvoice[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                 String             @id @default(uuid()) @db.Uuid
+  tenantId           String             @map("tenant_id") @db.Uuid
+  planId             String             @map("plan_id") @db.Uuid
+  status             SubscriptionStatus
+  interval           BillingInterval    @default(MONTHLY)
+  currentPeriodStart DateTime           @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  trialEndsAt        DateTime?          @map("trial_ends_at")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  billingProvider    PaymentProviderCode? @map("billing_provider")
+  providerReference  String?            @map("provider_reference")
+  retryCount         Int                @default(0) @map("retry_count")
+  /// Downgrade / interval change scheduled for the end of the current period.
+  pendingPlanId      String?            @map("pending_plan_id") @db.Uuid
+  pendingInterval    BillingInterval?   @map("pending_interval")
+  endedAt            DateTime?          @map("ended_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan        SubscriptionPlan      @relation("SubscriptionPlan", fields: [planId], references: [id])
+  pendingPlan SubscriptionPlan?     @relation("SubscriptionPendingPlan", fields: [pendingPlanId], references: [id])
+  invoices    SubscriptionInvoice[]
+  events      SubscriptionEvent[]
+
+  @@index([tenantId, status])
+  @@index([currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+model SubscriptionInvoice {
+  id             String        @id @default(uuid()) @db.Uuid
+  subscriptionId String        @map("subscription_id") @db.Uuid
+  tenantId       String        @map("tenant_id") @db.Uuid
+  number         String        @unique
+  kind           InvoiceKind
+  /// Plan and interval this invoice pays for; applied to the subscription when the invoice is paid.
+  planId         String        @map("plan_id") @db.Uuid
+  interval       BillingInterval
+  description    String?
+  amountMinor    BigInt        @map("amount_minor")
+  currency       String        @db.Char(3)
+  status         InvoiceStatus @default(OPEN)
+  periodStart    DateTime      @map("period_start")
+  periodEnd      DateTime      @map("period_end")
+  dueAt          DateTime      @map("due_at")
+  paidAt         DateTime?     @map("paid_at")
+  transactionId  String?       @unique @map("transaction_id") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  subscription Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  plan         SubscriptionPlan    @relation(fields: [planId], references: [id])
+  transaction  PaymentTransaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([subscriptionId, status])
+  @@map("subscription_invoices")
+}
+
+/// Subscription history. `dedupeKey` makes scheduled side effects (reminders, lifecycle transitions)
+/// idempotent across job retries and multiple workers.
+model SubscriptionEvent {
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @map("tenant_id") @db.Uuid
+  subscriptionId String                @map("subscription_id") @db.Uuid
+  type           SubscriptionEventType
+  fromPlanId     String?               @map("from_plan_id") @db.Uuid
+  toPlanId       String?               @map("to_plan_id") @db.Uuid
+  invoiceId      String?               @map("invoice_id") @db.Uuid
+  dedupeKey      String?               @unique @map("dedupe_key")
+  metadata       Json                  @default("{}")
+  actorId        String?               @map("actor_id") @db.Uuid // null => system
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([subscriptionId, createdAt])
+  @@map("subscription_events")
+}
+
+// ─────────────────────── Catalogue & inventory ───────────────────────
+
+model ProductCategory {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  name      String
+  slug      String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   ProductCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children ProductCategory[] @relation("CategoryTree")
+  products Product[]
+
+  @@unique([tenantId, slug])
+  @@map("product_categories")
+}
+
+model Product {
+  id                  String        @id @default(uuid()) @db.Uuid
+  tenantId            String        @map("tenant_id") @db.Uuid
+  categoryId          String?       @map("category_id") @db.Uuid
+  name                String
+  slug                String
+  description         String?
+  productCode         String        @map("product_code") // e.g. BAG001 — used in live sessions & WhatsApp
+  status              ProductStatus @default(DRAFT)
+  currency            String        @default("NGN") @db.Char(3)
+  tags                String[]      @default([])
+  media               Json          @default("[]") // [{type:"image"|"video", key, url, sortOrder}]
+  weightGrams         Int?          @map("weight_grams")
+  dimensionsMm        Json?         @map("dimensions_mm") // {l,w,h}
+  lowStockThreshold   Int           @default(5) @map("low_stock_threshold")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  deletedAt           DateTime?     @map("deleted_at")
+
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category     ProductCategory?     @relation(fields: [categoryId], references: [id])
+  variants     ProductVariant[]
+  sessionLinks LiveSessionProduct[]
+
+  @@unique([tenantId, productCode])
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@map("products")
+}
+
+/// Every sellable unit is a variant. Simple products have one default variant.
+model ProductVariant {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  productId         String   @map("product_id") @db.Uuid
+  sku               String
+  name              String // "Black / Large"
+  attributes        Json     @default("{}") // { colour: "Black", size: "L" }
+  priceMinor        BigInt   @map("price_minor")
+  promoPriceMinor   BigInt?  @map("promo_price_minor")
+  costPriceMinor    BigInt?  @map("cost_price_minor")
+  isDefault         Boolean  @default(false) @map("is_default")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventory  Inventory?
+  orderItems OrderItem[]
+
+  @@unique([tenantId, sku])
+  @@index([productId])
+  @@map("product_variants")
+}
+
+/// One row per variant. `version` supports optimistic checks; reservations use row locks (SELECT … FOR UPDATE).
+model Inventory {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  variantId   String   @unique @map("variant_id") @db.Uuid
+  onHand      Int      @default(0) @map("on_hand")
+  reserved    Int      @default(0)
+  version     Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  variant   ProductVariant      @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  movements InventoryMovement[]
+
+  @@index([tenantId])
+  @@map("inventory")
+}
+
+model InventoryMovement {
+  id          String                @id @default(uuid()) @db.Uuid
+  tenantId    String                @map("tenant_id") @db.Uuid
+  inventoryId String                @map("inventory_id") @db.Uuid
+  type        InventoryMovementType
+  quantity    Int // signed delta applied to onHand or reserved depending on type
+  reason      String?
+  orderId     String?               @map("order_id") @db.Uuid
+  onHandAfter   Int?                @map("on_hand_after") // balances after the movement, for an auditable history
+  reservedAfter Int?                @map("reserved_after")
+  actorId     String?               @map("actor_id") @db.Uuid
+  createdAt   DateTime              @default(now()) @map("created_at")
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([inventoryId])
+  @@map("inventory_movements")
+}
+
+// ─────────────────────── Customers ───────────────────────
+
+model Customer {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  fullName      String    @map("full_name")
+  phone         String?
+  email         String?
+  whatsappOptIn Boolean   @default(false) @map("whatsapp_opt_in")
+  optInAt       DateTime? @map("opt_in_at")
+  /// Set when the customer replied STOP; cleared by START. Order updates then go by SMS/email only.
+  whatsappOptOutAt DateTime? @map("whatsapp_opt_out_at")
+  /// Customer asked not to receive SMS order updates.
+  smsOptOut     Boolean   @default(false) @map("sms_opt_out")
+  anonymizedAt  DateTime? @map("anonymized_at") // personal data erased on request; order history kept
+  tags          String[]  @default([])
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  addresses CustomerAddress[]
+  orders    Order[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId, email])
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  label      String?
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  country    String   @default("NG") @db.Char(2)
+  landmark   String?
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_addresses")
+}
+
+// ─────────────────────── Channels & live selling ───────────────────────
+
+model SalesChannel {
+  id        String      @id @default(uuid()) @db.Uuid
+  tenantId  String      @map("tenant_id") @db.Uuid
+  type      ChannelType
+  name      String
+  handle    String? // @fashionbyada
+  config    Json        @default("{}")
+  isActive  Boolean     @default(true) @map("is_active")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  liveSessions LiveSession[]
+  orders       Order[]
+
+  @@index([tenantId])
+  @@map("sales_channels")
+}
+
+model LiveSession {
+  id                 String            @id @default(uuid()) @db.Uuid
+  tenantId           String            @map("tenant_id") @db.Uuid
+  channelId          String            @map("channel_id") @db.Uuid
+  title              String
+  description        String?
+  status             LiveSessionStatus @default(SCHEDULED)
+  scheduledAt        DateTime          @map("scheduled_at")
+  startedAt          DateTime?         @map("started_at")
+  endedAt            DateTime?         @map("ended_at")
+  orderInstructions  String?           @map("order_instructions")
+  peakViewers        Int?              @map("peak_viewers") // only when a supported API / seller provides it
+  createdBy          String            @map("created_by") @db.Uuid
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  tenant     Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channel    SalesChannel           @relation(fields: [channelId], references: [id])
+  products   LiveSessionProduct[]
+  moderators LiveSessionModerator[]
+  orders     Order[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, scheduledAt])
+  @@map("live_sessions")
+}
+
+model LiveSessionProduct {
+  liveSessionId   String  @map("live_session_id") @db.Uuid
+  productId       String  @map("product_id") @db.Uuid
+  sessionPriceMinor BigInt? @map("session_price_minor") // optional live-only price
+  sortOrder       Int     @default(0) @map("sort_order")
+
+  liveSession LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([liveSessionId, productId])
+  @@map("live_session_products")
+}
+
+model LiveSessionModerator {
+  liveSessionId String @map("live_session_id") @db.Uuid
+  memberId      String @map("member_id") @db.Uuid
+
+  liveSession LiveSession  @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  member      TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([liveSessionId, memberId])
+  @@map("live_session_moderators")
+}
+
+// ─────────────────────── Orders ───────────────────────
+
+model Order {
+  id                  String           @id @default(uuid()) @db.Uuid
+  tenantId            String           @map("tenant_id") @db.Uuid
+  reference           String // LS-XXXXXX, unique per tenant
+  customerId          String?          @map("customer_id") @db.Uuid
+  channelId           String?          @map("channel_id") @db.Uuid
+  liveSessionId       String?          @map("live_session_id") @db.Uuid
+  affiliateAccountId  String?          @map("affiliate_account_id") @db.Uuid
+  status              OrderStatus      @default(DRAFT)
+  paymentStatus       PaymentStatus    @default(UNPAID) @map("payment_status")
+  fulfilmentStatus    FulfilmentStatus @default(UNFULFILLED) @map("fulfilment_status")
+  currency            String           @default("NGN") @db.Char(3)
+  subtotalMinor       BigInt           @default(0) @map("subtotal_minor")
+  discountMinor       BigInt           @default(0) @map("discount_minor")
+  deliveryFeeMinor    BigInt           @default(0) @map("delivery_fee_minor")
+  totalMinor          BigInt           @default(0) @map("total_minor")
+  paymentMethod       PaymentProviderCode? @map("payment_method")
+  shippingAddress     Json?            @map("shipping_address") // snapshot at order time
+  notes               String?
+  reservationExpiresAt DateTime?       @map("reservation_expires_at")
+  stockCommittedAt     DateTime?       @map("stock_committed_at") // reserved units converted to a sale (once)
+  trackingTokenHash    String?         @unique @map("tracking_token_hash") // customer's order-tracking link (hashed)
+  /// The same token, encrypted (tenant-bound), so customer messages can carry the private link. Never returned.
+  trackingTokenEnc     String?         @map("tracking_token_enc")
+  /// Mobile offline queue: the app's id for this order, so a retried send never creates it twice (unique per store).
+  clientRef            String?         @map("client_ref")
+  createdBy           String?          @map("created_by") @db.Uuid
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer      Customer?            @relation(fields: [customerId], references: [id])
+  channel       SalesChannel?        @relation(fields: [channelId], references: [id])
+  liveSession   LiveSession?         @relation(fields: [liveSessionId], references: [id])
+  affiliate     AffiliateAccount?    @relation(fields: [affiliateAccountId], references: [id])
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+  transactions  PaymentTransaction[]
+  delivery      DeliveryOrder?
+
+  @@unique([tenantId, reference])
+  @@unique([tenantId, clientRef])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, liveSessionId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  orderId        String @map("order_id") @db.Uuid
+  variantId      String @map("variant_id") @db.Uuid
+  productName    String @map("product_name") // snapshot
+  productCode    String? @map("product_code") // snapshot (e.g. BAG001), shown on receipts
+  position       Int    @default(0) // line order as entered (receipts, live console)
+  variantName    String @map("variant_name")
+  sku            String
+  quantity       Int
+  unitPriceMinor BigInt @map("unit_price_minor")
+  discountMinor  BigInt @default(0) @map("discount_minor")
+  lineTotalMinor BigInt @map("line_total_minor")
+
+  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@index([tenantId, variantId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id         String       @id @default(uuid()) @db.Uuid
+  tenantId   String       @map("tenant_id") @db.Uuid
+  orderId    String       @map("order_id") @db.Uuid
+  fromStatus OrderStatus? @map("from_status")
+  toStatus   OrderStatus  @map("to_status")
+  note       String?
+  actorId    String?      @map("actor_id") @db.Uuid
+  actorType  String       @default("user") @map("actor_type") // user | system | webhook
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}
+
+// ─────────────────────── Payments ───────────────────────
+
+/// Platform-level provider registry (enable/disable, feature flags). Secrets live in env / vault, not here.
+model PaymentProvider {
+  id           String              @id @default(uuid()) @db.Uuid
+  code         PaymentProviderCode @unique
+  name         String
+  isEnabled    Boolean             @default(false) @map("is_enabled")
+  sandboxMode  Boolean             @default(true) @map("sandbox_mode")
+  capabilities Json                @default("{}") // { subaccounts, split, refunds, virtualAccounts } — verified flags
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  sellerAccounts SellerPaymentAccount[]
+
+  @@map("payment_providers")
+}
+
+/// Seller's own gateway config. Secrets are AES-256-GCM encrypted (credentialsEnc) and never leave the backend.
+model SellerPaymentAccount {
+  id               String              @id @default(uuid()) @db.Uuid
+  tenantId         String              @map("tenant_id") @db.Uuid
+  providerId       String              @map("provider_id") @db.Uuid
+  settlementMode   SettlementMode      @map("settlement_mode")
+  credentialsEnc   String?             @map("credentials_enc") // seller-owned keys
+  publicKey        String?             @map("public_key") // safe to expose
+  subaccountCode   String?             @map("subaccount_code") // provider subaccount / connected account id
+  commissionBps    Int?                @map("commission_bps") // override platform default
+  testMode         Boolean             @default(true) @map("test_mode") // sandbox credentials
+  bankAccountId    String?             @map("bank_account_id") @db.Uuid // split settlement: where the subaccount settles
+  lastVerifiedAt   DateTime?           @map("last_verified_at")
+  isActive         Boolean             @default(true) @map("is_active")
+  isDefault        Boolean             @default(false) @map("is_default")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider     PaymentProvider      @relation(fields: [providerId], references: [id])
+  transactions PaymentTransaction[]
+
+  @@unique([tenantId, providerId])
+  @@map("seller_payment_accounts")
+}
+
+model PaymentTransaction {
+  id                   String              @id @default(uuid()) @db.Uuid
+  tenantId             String              @map("tenant_id") @db.Uuid
+  purpose              TransactionPurpose
+  orderId              String?             @map("order_id") @db.Uuid
+  customerId           String?             @map("customer_id") @db.Uuid
+  provider             PaymentProviderCode
+  reference            String              @unique // our reference, sent to provider
+  providerReference    String?             @map("provider_reference")
+  idempotencyKey       String              @unique @map("idempotency_key")
+  currency             String              @db.Char(3)
+  grossMinor           BigInt              @map("gross_minor")
+  providerFeeMinor     BigInt?             @map("provider_fee_minor")
+  platformCommissionMinor BigInt           @default(0) @map("platform_commission_minor")
+  sellerProceedsMinor  BigInt?             @map("seller_proceeds_minor")
+  status               TransactionStatus   @default(INITIALIZED)
+  settlementStatus     SettlementStatus    @default(NOT_APPLICABLE) @map("settlement_status")
+  settlementMode       SettlementMode?     @map("settlement_mode")
+  checkoutUrl          String?             @map("checkout_url")
+  providerCheckoutId   String?             @map("provider_checkout_id") // provider's checkout/session id when verify needs it (Bachs chk_…)
+  sellerPaymentAccountId String?           @map("seller_payment_account_id") @db.Uuid // whose credentials (null = platform)
+  subscriptionInvoiceId String?            @map("subscription_invoice_id") @db.Uuid // SUBSCRIPTION purpose: the invoice this attempt pays
+  failureReason        String?             @map("failure_reason")
+  verifiedAt           DateTime?           @map("verified_at")
+  verifiedBy           String?             @map("verified_by") // "provider:verify" | "webhook" | userId (manual)
+  transferEvidence     Json?               @map("transfer_evidence") // bank transfer: {payerRef, fileKey}
+  rawProviderResponse  Json?               @map("raw_provider_response")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order          Order?               @relation(fields: [orderId], references: [id])
+  sellerAccount  SellerPaymentAccount? @relation(fields: [sellerPaymentAccountId], references: [id])
+  refunds        PaymentRefund[]
+  webhookEvents  PaymentWebhookEvent[]
+  ledgerEntries  LedgerEntry[]
+  invoice        SubscriptionInvoice?
+
+  @@unique([provider, providerReference])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([orderId])
+  @@index([subscriptionInvoiceId])
+  @@index([provider, providerCheckoutId])
+  @@index([status, createdAt])
+  @@map("payment_transactions")
+}
+
+model PaymentWebhookEvent {
+  id              String                  @id @default(uuid()) @db.Uuid
+  provider        PaymentProviderCode
+  eventId         String                  @map("event_id") // provider event id or hash of payload
+  eventType       String                  @map("event_type")
+  signatureValid  Boolean                 @map("signature_valid")
+  payload         Json
+  status          WebhookProcessingStatus @default(RECEIVED)
+  error           String?
+  transactionId   String?                 @map("transaction_id") @db.Uuid
+  receivedAt      DateTime                @default(now()) @map("received_at")
+  processedAt     DateTime?               @map("processed_at")
+
+  transaction PaymentTransaction? @relation(fields: [transactionId], references: [id])
+
+  @@unique([provider, eventId]) // duplicate webhook prevention
+  @@index([status])
+  @@map("payment_webhook_events")
+}
+
+model PaymentRefund {
+  id                String       @id @default(uuid()) @db.Uuid
+  tenantId          String       @map("tenant_id") @db.Uuid
+  transactionId     String       @map("transaction_id") @db.Uuid
+  amountMinor       BigInt       @map("amount_minor")
+  currency          String       @db.Char(3)
+  reason            String?
+  status            RefundStatus @default(REQUESTED)
+  providerReference String?      @map("provider_reference")
+  idempotencyKey    String       @unique @map("idempotency_key")
+  requestedBy       String       @map("requested_by") @db.Uuid
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transaction PaymentTransaction @relation(fields: [transactionId], references: [id])
+
+  @@index([tenantId, status])
+  @@map("payment_refunds")
+}
+
+model Settlement {
+  id                String              @id @default(uuid()) @db.Uuid
+  tenantId          String              @map("tenant_id") @db.Uuid
+  provider          PaymentProviderCode
+  providerReference String?             @map("provider_reference")
+  currency          String              @db.Char(3)
+  amountMinor       BigInt              @map("amount_minor")
+  status            SettlementStatus
+  settledAt         DateTime?           @map("settled_at")
+  meta              Json?
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerReference])
+  @@index([tenantId, status])
+  @@map("settlements")
+}
+
+/// Double-entry ledger. tenantId null => platform-owned account.
+model LedgerAccount {
+  id        String            @id @default(uuid()) @db.Uuid
+  tenantId  String?           @map("tenant_id") @db.Uuid
+  code      String // e.g. SELLER_RECEIVABLE, PLATFORM_COMMISSION, PROVIDER_FEES, SUBSCRIPTION_REVENUE
+  type      LedgerAccountType
+  currency  String            @db.Char(3)
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  entries LedgerEntry[]
+
+  @@unique([tenantId, code, currency])
+  @@map("ledger_accounts")
+}
+
+model LedgerEntry {
+  id            String          @id @default(uuid()) @db.Uuid
+  journalId     String          @map("journal_id") @db.Uuid // groups balanced debit/credit lines
+  accountId     String          @map("account_id") @db.Uuid
+  transactionId String?         @map("transaction_id") @db.Uuid
+  direction     LedgerDirection
+  amountMinor   BigInt          @map("amount_minor")
+  currency      String          @db.Char(3)
+  description   String?
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  account     LedgerAccount       @relation(fields: [accountId], references: [id])
+  transaction PaymentTransaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([journalId])
+  @@index([accountId, createdAt])
+  @@map("ledger_entries")
+}
+
+model BankAccount {
+  id                   String   @id @default(uuid()) @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  bankName             String   @map("bank_name")
+  bankCode             String?  @map("bank_code")
+  accountName          String   @map("account_name")
+  accountNumberEnc     String   @map("account_number_enc") // encrypted
+  accountNumberLast4   String   @map("account_number_last4")
+  transferInstructions String?  @map("transfer_instructions")
+  currencies           String[] @default(["NGN"])
+  isDefault            Boolean  @default(false) @map("is_default")
+  /// Shown to customers as a place to pay by bank transfer (§13). Split-settlement accounts stay private.
+  forTransfers         Boolean  @default(false) @map("for_transfers")
+  isActive             Boolean  @default(true) @map("is_active")
+  /// Account name confirmed with the bank through a provider's account-resolution API.
+  nameVerified         Boolean  @default(false) @map("name_verified")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, forTransfers, isActive])
+  @@map("bank_accounts")
+}
+
+model VirtualAccount {
+  id                 String              @id @default(uuid()) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  provider           PaymentProviderCode
+  providerReference  String              @map("provider_reference")
+  bankName           String              @map("bank_name")
+  accountName        String              @map("account_name")
+  accountNumberEnc   String              @map("account_number_enc")
+  accountNumberLast4 String              @map("account_number_last4")
+  currency           String              @default("NGN") @db.Char(3)
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerReference])
+  @@index([tenantId])
+  @@map("virtual_accounts")
+}
+
+// ─────────────────────── Notifications (Veltrix) ───────────────────────
+
+model Notification {
+  id               String              @id @default(uuid()) @db.Uuid
+  tenantId         String?             @map("tenant_id") @db.Uuid
+  channel          NotificationChannel
+  type             String // ORDER_CONFIRMATION, PAYMENT_REMINDER, OTP, ...
+  destination      String
+  templateKey      String?             @map("template_key")
+  payload          Json                @default("{}")
+  status           NotificationStatus  @default(QUEUED)
+  provider         String              @default("VELTRIX")
+  providerMessageId String?            @map("provider_message_id")
+  error            String?
+  attempts         Int                 @default(0)
+  /// One message per business event (e.g. "order:<id>:confirmation:sms"): a repeat of the event never sends twice.
+  dedupeKey        String?             @unique @map("dedupe_key")
+  /// Secret-bearing messages (OTP, sign-in links) are never stored, so they can't be retried later.
+  retryable        Boolean             @default(true)
+  /// Idempotency-key generation: bumped only after a definite failure, so an ambiguous one (timeout) is retried under
+  /// the same key and can never send twice, while a definite failure gets a fresh attempt.
+  providerKeySeq   Int                 @default(0) @map("provider_key_seq")
+  nextAttemptAt    DateTime?           @map("next_attempt_at")
+  sentAt           DateTime?           @map("sent_at")
+  deliveredAt      DateTime?           @map("delivered_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  tenant Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usage  NotificationUsage?
+
+  @@index([tenantId, createdAt])
+  @@index([status])
+  @@index([status, nextAttemptAt])
+  @@map("notifications")
+}
+
+model NotificationUsage {
+  id             String              @id @default(uuid()) @db.Uuid
+  tenantId       String              @map("tenant_id") @db.Uuid
+  notificationId String              @unique @map("notification_id") @db.Uuid
+  channel        NotificationChannel
+  costMinor      BigInt              @map("cost_minor")
+  currency       String              @default("NGN") @db.Char(3)
+  billedPeriod   String              @map("billed_period") // YYYY-MM
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, billedPeriod])
+  @@map("notification_usage")
+}
+
+// ─────────────────────── Storefront & delivery ───────────────────────
+
+model StorefrontSettings {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @unique @map("tenant_id") @db.Uuid
+  logoKey       String?  @map("logo_key")
+  coverKey      String?  @map("cover_key")
+  description   String?
+  contactPhone  String?  @map("contact_phone")
+  contactEmail  String?  @map("contact_email")
+  whatsappNumber String? @map("whatsapp_number")
+  socialLinks   Json     @default("{}")
+  theme         Json     @default("{}")
+  isPublished   Boolean  @default(false) @map("is_published")
+  /// How customers should order, shown on the storefront and used in live sessions (e.g. "Send the product code to our WhatsApp").
+  orderInstructions String? @map("order_instructions")
+  /// Phase 10: { pickupEnabled, pickupAddress, pickupInstructions, deliverOutsideZones }. Zones live in delivery_zones.
+  deliverySettings Json @default("{}") @map("delivery_settings")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("storefront_settings")
+}
+
+model DeliveryZone {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String // "Lagos Mainland"
+  states      String[] @default([])
+  cities      String[] @default([])
+  feeMinor    BigInt   @map("fee_minor")
+  currency    String   @default("NGN") @db.Char(3)
+  etaDays     Int?     @map("eta_days")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries DeliveryOrder[]
+
+  @@index([tenantId])
+  @@map("delivery_zones")
+}
+
+model DeliveryOrder {
+  id                String         @id @default(uuid()) @db.Uuid
+  tenantId          String         @map("tenant_id") @db.Uuid
+  orderId           String         @unique @map("order_id") @db.Uuid
+  method            DeliveryMethod
+  status            DeliveryStatus @default(PENDING)
+  zoneId            String?        @map("zone_id") @db.Uuid
+  logisticsProvider String?        @map("logistics_provider") // adapter key, not hardcoded
+  /// Who carries it when the seller books a courier themselves (free text, e.g. "GIG Logistics").
+  carrierName       String?        @map("carrier_name")
+  trackingReference String?        @map("tracking_reference")
+  dispatchNote      String?        @map("dispatch_note")
+  dispatchedAt      DateTime?      @map("dispatched_at")
+  deliveredAt       DateTime?      @map("delivered_at")
+  /// Last failed attempt or return reason.
+  problemNote       String?        @map("problem_note")
+  /// The seller's own rider or courier company (Phase 10b). `carrierName` keeps the name as it was at dispatch.
+  courierId         String?        @map("courier_id") @db.Uuid
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  zone    DeliveryZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  courier Courier?      @relation(fields: [courierId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@map("delivery_orders")
+}
+
+/// A seller's own delivery people: a rider on their payroll or a courier company they book themselves.
+model Courier {
+  id                  String      @id @default(uuid()) @db.Uuid
+  tenantId            String      @map("tenant_id") @db.Uuid
+  name                String
+  kind                CourierKind @default(RIDER)
+  phone               String?
+  notes               String?
+  /// Show the phone number on the customer's tracking page and in the dispatch message.
+  showPhoneToCustomer Boolean     @default(false) @map("show_phone_to_customer")
+  isActive            Boolean     @default(true) @map("is_active")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries DeliveryOrder[]
+
+  @@index([tenantId, isActive])
+  @@map("couriers")
+}
+
+/// Scheduled analytics email (advanced analytics plans).
+model ReportSchedule {
+  id               String          @id @default(uuid()) @db.Uuid
+  tenantId         String          @map("tenant_id") @db.Uuid
+  frequency        ReportFrequency
+  /// Members (user ids) who receive it; each must have reports:read when it is sent.
+  recipientUserIds String[]        @default([]) @map("recipient_user_ids") @db.Uuid
+  isActive         Boolean         @default(true) @map("is_active")
+  /// Last period sent, e.g. "2026-W45" or "2026-10".
+  lastPeriod       String?         @map("last_period")
+  createdBy        String          @map("created_by") @db.Uuid
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, frequency])
+  @@map("report_schedules")
+}
+
+// ─────────────────────── Affiliates ───────────────────────
+
+model AffiliateAccount {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  name           String
+  email          String?
+  phone          String?
+  referralCode   String   @map("referral_code")
+  commissionBps  Int      @map("commission_bps")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders      Order[]
+  commissions AffiliateCommission[]
+
+  @@unique([tenantId, referralCode])
+  @@map("affiliate_accounts")
+}
+
+model AffiliateCommission {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  affiliateAccountId String    @map("affiliate_account_id") @db.Uuid
+  orderId            String    @unique @map("order_id") @db.Uuid
+  amountMinor        BigInt    @map("amount_minor")
+  currency           String    @db.Char(3)
+  status             String    @default("PENDING") // PENDING | APPROVED | PAID | VOID
+  paidAt             DateTime? @map("paid_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  affiliate AffiliateAccount @relation(fields: [affiliateAccountId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("affiliate_commissions")
+}
+
+// ─────────────────────── Platform ───────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String?  @map("tenant_id") @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String // "auth.login", "product.update", "payment.manual_verify"
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json     @default("{}")
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor  User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+/// Enquiries from the public "Contact sales" form (custom / Enterprise pricing). Platform-level, not tenant data.
+model SalesInquiry {
+  id           String             @id @default(uuid()) @db.Uuid
+  fullName     String             @map("full_name")
+  email        String
+  phone        String?
+  businessName String             @map("business_name")
+  planInterest String?            @map("plan_interest")
+  monthlyOrders String?           @map("monthly_orders") // self-reported band, e.g. "1,000–5,000"
+  message      String
+  status       SalesInquiryStatus @default(NEW)
+  notes        String?
+  ip           String?
+  userAgent    String?            @map("user_agent")
+  handledBy    String?            @map("handled_by") @db.Uuid
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([email])
+  @@map("sales_inquiries")
+}
+
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
+}
+
+// ─────────────────────── Phase 9: automation ───────────────────────
+
+/// Transactional outbox: business events written in the same transaction as the change, then turned into customer
+/// messages by a job. A crash between commit and send can't lose a notification.
+model OutboxEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  type        String // ORDER_PLACED, PAYMENT_RECEIVED, ORDER_DISPATCHED, ...
+  entityId    String    @map("entity_id") @db.Uuid
+  payload     Json      @default("{}")
+  attempts    Int       @default(0)
+  error       String?
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([processedAt, createdAt])
+  @@index([tenantId, entityId])
+  @@map("outbox_events")
+}
+
+/// Which customer messages a store sends, on which channels, and reminder timing.
+model NotificationPreference {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @unique @map("tenant_id") @db.Uuid
+  settings  Json     @default("{}")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+/// WhatsApp ordering conversation on the platform number, one per customer phone. `tenantId` = the store the
+/// conversation is currently about (null until a store is identified). `lastInboundAt` drives Meta's 24-hour window.
+model WhatsappConversation {
+  id            String   @id @default(uuid()) @db.Uuid
+  phone         String   @unique
+  tenantId      String?  @map("tenant_id") @db.Uuid
+  state         String   @default("IDLE")
+  data          Json     @default("{}")
+  lastInboundAt DateTime @map("last_inbound_at")
+  inboundCount  Int      @default(0) @map("inbound_count")
+  windowStart   DateTime @default(now()) @map("window_start") // rate-limit window
+  windowCount   Int      @default(0) @map("window_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@map("whatsapp_conversations")
+}
+
+/// Forwarded Veltrix deliveries already processed (de-duplicated on the delivery id).
+model WhatsappInboundEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  deliveryId String   @unique @map("delivery_id")
+  event      String
+  phone      String?
+  status     String   @default("PROCESSED")
+  error      String?
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@map("whatsapp_inbound_events")
+}
+
+
+/// A seller's phone registered for push notifications (Expo push token). User-level, not store-level: the user gets
+/// pushes for every store they can act on.
+model DeviceToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  token      String    @unique
+  platform   String // ios | android
+  deviceName String?   @map("device_name")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  disabledAt DateTime? @map("disabled_at") // Expo reported DeviceNotRegistered, or the user signed out
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tickets PushTicket[]
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+/// Expo push tickets waiting for their delivery receipt (checked ~15 minutes after sending, then deleted).
+model PushTicket {
+  id            String   @id @default(uuid()) @db.Uuid
+  ticketId      String   @unique @map("ticket_id")
+  deviceTokenId String   @map("device_token_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  device DeviceToken @relation(fields: [deviceTokenId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("push_tickets")
+}

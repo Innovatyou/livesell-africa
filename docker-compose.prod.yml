@@ -1,0 +1,58 @@
+# Staging / production stack (one VM). Postgres and Redis are expected to be MANAGED services; the `selfhosted`
+# profile runs them here for a small single-server staging box. Secrets come from apps/api/.env.production (never
+# committed) or the host's secret manager. See docs/DEPLOYMENT.md.
+#
+#   docker compose -f docker-compose.prod.yml build
+#   docker compose -f docker-compose.prod.yml run --rm migrate      # every release, before `up`
+#   docker compose -f docker-compose.prod.yml up -d
+services:
+  migrate:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: migrator }
+    env_file: apps/api/.env.production
+    profiles: ["tools"]
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: runtime }
+    image: livesell/api:${RELEASE:-latest}
+    env_file: apps/api/.env.production
+    restart: unless-stopped
+    deploy: { resources: { limits: { memory: 1g } } }
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args: { NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:?set PUBLIC_API_URL, e.g. https://api.livesell.africa}" }
+    image: livesell/web:${RELEASE:-latest}
+    restart: unless-stopped
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on: [api, web]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./infra/nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${TLS_DIR:-./infra/tls}:/etc/nginx/tls:ro           # fullchain.pem + privkey.pem (e.g. from certbot)
+      - ./infra/nginx/acme:/var/www/acme:ro                  # HTTP-01 challenges for certificate renewal
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["selfhosted"]
+    restart: unless-stopped
+    environment: { POSTGRES_USER: livesell, POSTGRES_DB: livesell, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}" }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U livesell"], interval: 10s, retries: 10 }
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["selfhosted"]
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
+    volumes: [redisdata:/data]
+
+volumes:
+  pgdata:
+  redisdata:
