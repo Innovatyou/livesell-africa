@@ -24,15 +24,14 @@ BIN="$ROOT/node_modules/.bin"
 # The selector may have put a node_modules symlink (to the virtualenv) in an app root; the workspace install owns these.
 for d in apps/api apps/web; do [ -L "$d/node_modules" ] && rm "$d/node_modules"; done
 
-# npm 11 runs install scripts only for allowed packages: Prisma engines (migrate), argon2 + msgpackr (native, prebuilt).
-SCRIPTS="@prisma/engines,prisma,argon2,msgpackr-extract"
+# npm 11 runs install scripts only for packages listed in .npmrc (allow-scripts).
 echo "== Installing dependencies (API + web)"
 if [ "${FORCE_INSTALL:-0}" != 1 ] && [ node_modules/.package-lock.json -nt package-lock.json ]; then
   echo "   up to date (lockfile unchanged); FORCE_INSTALL=1 to reinstall"
 else
-  npm_ ci --include=dev --no-audit --no-fund --allow-scripts="$SCRIPTS"
+  npm_ ci --include=dev --no-audit --no-fund
 fi
-npm_ rebuild --allow-scripts="$SCRIPTS" @prisma/engines prisma argon2 msgpackr-extract
+npm_ rebuild @prisma/engines prisma argon2 msgpackr-extract
 
 echo "== Building the API"
 # prisma.config.ts requires DATABASE_URL; `generate` never connects, so a placeholder is enough when none is stored.
