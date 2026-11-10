@@ -141,3 +141,79 @@ Until then, sellers use their own riders or couriers (already built).
 - changed: `billing.tsx` (plans), `products/[id].tsx` (auto code, options, option prices), `verification.tsx` (PDF),
   `settings/store.tsx`, `orders/[id].tsx`, Live and More tabs
 - deps: `@react-native-community/datetimepicker`, `expo-document-picker`
+
+---
+
+# Round 2 (2026-11-10): modern app UI and LiveSell Academy
+
+## Status
+
+| Check | Result |
+|---|---|
+| Mobile `tsc` | clean |
+| Mobile jest | **17 / 17** (+ Academy content and progress) |
+| `expo-doctor` | 20 / 20 |
+| Android bundle | ok |
+| On a device | not yet. A new build is needed for the new native modules: linear gradient, haptics, fonts |
+
+## Design system (`src/components/ui.tsx`)
+
+**New components:**
+- Ionicons icons, `IconBadge`, `Avatar` (initials);
+- `ListRow` (icon / title / subtitle / right side / chevron);
+- `StatTile`;
+- `Hero`: brand gradient header, white on deep green, readable in both themes;
+- `SearchBar` with clear;
+- `Chips` (filter tabs), `SectionTitle`, `Progress`.
+
+**Upgraded components:**
+- `Button`: optional icon, light haptic tap, softer radius.
+- `Notice`: icon per tone; `role=alert` for errors.
+- `Empty`: icon and an optional call to action.
+
+**Navigation:**
+- Tab bar with filled / outline Ionicons and bold labels.
+- Headers flat on the canvas colour.
+
+## Screens
+
+| Screen | What's new |
+|---|---|
+| **Today** | Greeting hero with sales today and this month. Quick actions: Go live, Add product, Orders, Learn. Icon stat tiles (awaiting payment and to fulfil open the filtered orders). Academy progress card. Ranked top products. Payment rows with status icons |
+| **Orders** | Search bar. Filter chips. Rows with customer initials, reference, live session, hold time, amount and status. Empty state offers to start a live |
+| **Stock** | Search. Chips: All / Running low / Sold out (new server-side `stock` filter in the query). Stock-coloured icons |
+| **Live** | "You're live" hero with a button to the console. Platform icons (TikTok, Instagram, Facebook, YouTube, WhatsApp). Empty state links to the Academy |
+| **More** | Profile hero. Settings grouped: Learn, Store, Money, Team, App. Each row has an icon and a one-line hint. Notifications and biometric switches under "This phone" |
+
+Every other screen picks up the new buttons, notices and empty states automatically.
+
+## LiveSell Academy (More → Learn, Today, Live)
+
+**Screens:**
+- `learn/index.tsx`: course overview, overall and per-track progress, "Continue" to the next lesson.
+- `learn/[id].tsx`: a lesson. The quick-check question must be answered correctly before the lesson can be marked complete; then it moves on to the next lesson.
+
+**Lesson layout:** summary, numbered steps, pro tips, "Avoid", a quick check, and "Do it now in LiveSell" buttons that
+open the matching screen (add product, payments, delivery, new live, orders awaiting payment, team, analytics,
+verification).
+
+**Content** (`src/content/academy.ts`): 15 lessons in 6 tracks.
+
+| Track | Lessons |
+|---|---|
+| Start here | How live selling works; first 5 products; get paid safely; delivery |
+| TikTok Live | Access; setup; running a live that sells; after the live |
+| Instagram Live | Going live; stories / DMs / link in bio |
+| Facebook Live | Pages and groups |
+| WhatsApp | Business, Status, order-by-code |
+| Grow | Trust; pricing and flash deals; add a helper; read your numbers |
+
+- **Platform rules are hedged.** TikTok LIVE eligibility (age, followers) is described as "check in the app", with no
+  promised numbers or results. The screen says LiveSell isn't affiliated with these platforms.
+- **Progress** is saved on the phone (`src/lib/academy-progress.ts`). Unknown ids are ignored.
+- **Tests** check unique ids, valid quiz answers, and that every "Do it now" link points to a screen that exists.
+
+## Not done
+
+- The web app keeps its current design: tokens, dark mode and the 3D landing hero. The Academy is app-only for now. It
+  can be added to the web from the same content.

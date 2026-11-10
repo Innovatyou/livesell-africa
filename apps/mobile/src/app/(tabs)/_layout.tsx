@@ -1,11 +1,13 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Text, type ColorValue } from 'react-native';
+import { Platform, type ColorValue } from 'react-native';
 import { c } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 
-const icon = (glyph: string) => ({ color }: { color: ColorValue }) => <Text style={{ color, fontSize: 18 }}>{glyph}</Text>;
+type Glyph = React.ComponentProps<typeof Ionicons>['name'];
+const icon = (on: Glyph, off: Glyph) => ({ color, focused, size }: { color: ColorValue; focused: boolean; size: number }) => <Ionicons name={focused ? on : off} size={size} color={color as string} />;
 
 export default function TabsLayout() {
   const { can, workspace } = useAuth();
@@ -20,15 +22,19 @@ export default function TabsLayout() {
   }, [prefs.startTab]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Tabs screenOptions={{
-      tabBarActiveTintColor: c.brand, tabBarInactiveTintColor: c.ink3, headerTitleStyle: { color: c.ink }, headerTitle: workspace?.businessName ?? 'LiveSell',
-      headerStyle: { backgroundColor: c.surface }, sceneStyle: { backgroundColor: c.canvas },
-      tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.line, ...(c.depth ? { elevation: 12, shadowColor: c.shadow, shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: -3 } } : {}) },
+      tabBarActiveTintColor: c.brand, tabBarInactiveTintColor: c.ink3, headerTitleStyle: { color: c.ink, fontWeight: '800' }, headerTitle: workspace?.businessName ?? 'LiveSell',
+      headerStyle: { backgroundColor: c.canvas }, headerShadowVisible: false, sceneStyle: { backgroundColor: c.canvas },
+      tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+      tabBarStyle: {
+        backgroundColor: c.surface, borderTopColor: c.line, height: Platform.OS === 'ios' ? 86 : 64, paddingTop: 6, paddingBottom: Platform.OS === 'ios' ? 26 : 8,
+        ...(c.depth ? { elevation: 16, shadowColor: c.shadow, shadowOpacity: 0.12, shadowRadius: 14, shadowOffset: { width: 0, height: -4 } } : {}),
+      },
     }}>
-      <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: icon('◎') }} />
-      <Tabs.Screen name="orders" options={{ title: 'Orders', tabBarIcon: icon('☰'), href: can('orders:read') ? undefined : null }} />
-      <Tabs.Screen name="live" options={{ title: 'Live', tabBarIcon: icon('●'), href: can('live:read') ? undefined : null }} />
-      <Tabs.Screen name="products" options={{ title: 'Stock', tabBarIcon: icon('▦'), href: can('products:read') ? undefined : null }} />
-      <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: icon('⋯') }} />
+      <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: icon('home', 'home-outline') }} />
+      <Tabs.Screen name="orders" options={{ title: 'Orders', tabBarIcon: icon('receipt', 'receipt-outline'), href: can('orders:read') ? undefined : null }} />
+      <Tabs.Screen name="live" options={{ title: 'Live', tabBarIcon: icon('radio', 'radio-outline'), href: can('live:read') ? undefined : null }} />
+      <Tabs.Screen name="products" options={{ title: 'Stock', tabBarIcon: icon('cube', 'cube-outline'), href: can('products:read') ? undefined : null }} />
+      <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: icon('grid', 'grid-outline') }} />
     </Tabs>
   );
 }

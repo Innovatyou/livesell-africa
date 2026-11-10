@@ -47,7 +47,7 @@ function Gate() {
   return (
     <NavThemeProvider value={navTheme}>
     <StatusBar style={dark ? 'light' : 'dark'} />
-    <Stack screenOptions={{ headerTintColor: c.brand, headerTitleStyle: { color: c.ink }, headerStyle: { backgroundColor: c.surface }, contentStyle: { backgroundColor: c.canvas } }}>
+    <Stack screenOptions={{ headerTintColor: c.brand, headerStyle: { backgroundColor: c.canvas }, headerShadowVisible: false, headerTitleStyle: { color: c.ink, fontWeight: '800' }, contentStyle: { backgroundColor: c.canvas } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="signup" options={{ title: 'Create your store' }} />
@@ -64,6 +64,8 @@ function Gate() {
       <Stack.Screen name="settings/payments" options={{ title: 'Payments' }} />
       <Stack.Screen name="settings/messages" options={{ title: 'Customer messages' }} />
       <Stack.Screen name="appearance" options={{ title: 'Appearance' }} />
+      <Stack.Screen name="learn/index" options={{ title: 'LiveSell Academy' }} />
+      <Stack.Screen name="learn/[id]" options={{ title: 'Lesson' }} />
     </Stack>
     </NavThemeProvider>
   );
