@@ -4,6 +4,7 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { Badge, Button, Card, Empty, ErrorBox, Field, Loading, Muted, Notice, Screen, c } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 
 interface Status {
   verifiedAt: string | null;
@@ -17,6 +18,7 @@ const date = (s: string) => new Intl.DateTimeFormat('en-NG', { day: 'numeric', m
 
 /** CAC business verification: registered name, RC/BN number and a photo of the certificate (same API as the web). */
 export default function Verification() {
+  useTheme();
   const { can } = useAuth();
   const allowed = can('store:manage');
   const status = useApi<Status>(allowed ? '/business-verification' : null);

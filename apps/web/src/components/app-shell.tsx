@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ThemeToggle } from './theme-toggle';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
@@ -66,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             key={i.href} href={i.href} aria-current={active ? 'page' : undefined}
             className={cx('flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors', active ? 'bg-brand-50 font-medium text-brand-800' : 'text-ink-2 hover:bg-sunken hover:text-ink')}
           >
-            <svg aria-hidden viewBox="0 0 24 24" className={cx('size-[18px] shrink-0', active ? 'text-brand-600' : 'text-ink-3')} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d={i.icon} /></svg>
+            <svg aria-hidden viewBox="0 0 24 24" className={cx('size-[18px] shrink-0', active ? 'text-brand-700' : 'text-ink-3')} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d={i.icon} /></svg>
             {i.label}
           </Link>
         );
@@ -94,6 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="mt-auto border-t border-line px-1 pt-4">
         <p className="truncate px-2 text-sm font-medium text-ink">{me.fullName}</p>
         <p className="truncate px-2 text-xs text-ink-3">{me.email} · {roleLabel(workspace.role)}</p>
+        <ThemeToggle className="mx-2 mt-3" />
         <Button variant="ghost" size="sm" className="mt-2 w-full justify-start" onClick={() => void logout()}>Sign out</Button>
       </div>
     </div>

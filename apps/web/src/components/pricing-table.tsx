@@ -94,7 +94,7 @@ export function PricingTable({ plans }: { plans: Plan[] }) {
               <ul className="mt-4 flex-1 space-y-2 text-sm text-ink-2">
                 {planBullets(p).map((b) => (
                   <li key={b} className="flex gap-2">
-                    <svg aria-hidden viewBox="0 0 24 24" className="mt-0.5 size-4 shrink-0 text-brand-600" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                    <svg aria-hidden viewBox="0 0 24 24" className="mt-0.5 size-4 shrink-0 text-brand-700" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
                     {b}
                   </li>
                 ))}

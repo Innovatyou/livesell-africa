@@ -4,11 +4,13 @@ import { Pressable, ScrollView, Text, TextInput } from 'react-native';
 import { Badge, Card, Empty, ErrorBox, Loading, Muted, Row, Screen, c } from '@/components/ui';
 import { useApi } from '@/lib/auth';
 import { holdLabel, money, ORDER_STATUS, when } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Item { id: string; reference: string; status: string; totalMinor: string; currency: string; createdAt: string; reservationExpiresAt: string | null; customer: { fullName: string; phone: string | null } | null; liveSession: { title: string } | null }
 const VIEWS: Array<[string, string]> = [['', 'All'], ['awaiting_payment', 'Awaiting payment'], ['to_fulfil', 'To fulfil'], ['completed', 'Delivered'], ['cancelled', 'Cancelled']];
 
 export default function Orders() {
+  useTheme();
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState(params.view ?? '');
   const [search, setSearch] = useState('');

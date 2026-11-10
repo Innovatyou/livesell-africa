@@ -63,6 +63,36 @@
   }
 }
 
+/*
+ * Dark mode: the same token names with dark values. Follows the device unless the person picked Light or Dark
+ * (data-theme on <html>, set before paint by the script in app/layout.tsx; toggle in components/theme-toggle.tsx).
+ * brand-500/600/900 stay the same (filled buttons and bars with white text); 700/800 become light greens for text.
+ */
+@layer base {
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-canvas: #0d1210; --color-surface: #161d19; --color-sunken: #1d2521; --color-line: #2a332e; --color-line-strong: #3a443e;
+    --color-ink: #eef2ef; --color-ink-2: #c3cbc6; --color-ink-3: #959f9a; --color-ink-4: #6f7974;
+    --color-brand-50: #123526; --color-brand-100: #1a4a35; --color-brand-200: #236045; --color-brand-700: #4fd79a; --color-brand-800: #7fe3b5;
+    --color-good: #4fd79a; --color-good-bg: #123526; --color-warn: #f2c35b; --color-warn-bg: #3a2c0c;
+    --color-bad: #ff8a7a; --color-bad-bg: #3d1612; --color-info: #7fb2ff; --color-info-bg: #152a45;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.02);
+    --shadow-pop: 0 10px 30px rgb(0 0 0 / 0.55), 0 2px 8px rgb(0 0 0 / 0.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --color-canvas: #0d1210; --color-surface: #161d19; --color-sunken: #1d2521; --color-line: #2a332e; --color-line-strong: #3a443e;
+      --color-ink: #eef2ef; --color-ink-2: #c3cbc6; --color-ink-3: #959f9a; --color-ink-4: #6f7974;
+      --color-brand-50: #123526; --color-brand-100: #1a4a35; --color-brand-200: #236045; --color-brand-700: #4fd79a; --color-brand-800: #7fe3b5;
+      --color-good: #4fd79a; --color-good-bg: #123526; --color-warn: #f2c35b; --color-warn-bg: #3a2c0c;
+      --color-bad: #ff8a7a; --color-bad-bg: #3d1612; --color-info: #7fb2ff; --color-info-bg: #152a45;
+      --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.02);
+      --shadow-pop: 0 10px 30px rgb(0 0 0 / 0.55), 0 2px 8px rgb(0 0 0 / 0.4);
+    }
+  }
+}
+
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Field, Input, PageLoading, Select, Textarea, cx } from '@/components/ui';
+import { Alert, Button, Card, Field, Input, PageLoading, Select, Textarea, cx, PasswordInput } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { formatBps, formatMoney } from '@/lib/money';
 import type { Plan } from '@/lib/types';
@@ -205,7 +205,7 @@ function RegisterForm() {
               {(p) => <Input {...p} type="email" autoComplete="email" value={f.email} onChange={(e) => set('email', e.target.value)} />}
             </Field>
             <Field label="Password" error={show('password')} hint={PASSWORD_HINT}>
-              {(p) => <Input {...p} type="password" autoComplete="new-password" value={f.password} onChange={(e) => set('password', e.target.value)} />}
+              {(p) => <PasswordInput {...p} autoComplete="new-password" value={f.password} onChange={(e) => set('password', e.target.value)} />}
             </Field>
           </div>
           <div className="space-y-2">

@@ -34,6 +34,7 @@ describe('mobile session client', () => {
     await login('ada@example.com', 'CorrectHorse42');
     expect(call(0).headers['X-Client-Type']).toBe('mobile');
     expect(call(0).init.credentials).toBe('omit');
+    expect(call(0).body).toEqual({ identifier: 'ada@example.com', password: 'CorrectHorse42' });
     expect(store.get('ls.refresh')).toBe('r1');
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith('ls.refresh', 'r1', { keychainAccessible: 'afterFirstUnlockThisDevice' });
     fetchMock.mockImplementationOnce(() => json(200, { ok: true }));
@@ -44,7 +45,7 @@ describe('mobile session client', () => {
 
   it('wrong credentials read plainly', async () => {
     fetchMock.mockImplementationOnce(() => json(401, { message: 'Invalid credentials' }));
-    await expect(login('a@b.ng', 'x')).rejects.toThrow('Wrong email or password.');
+    await expect(login('a@b.ng', 'x')).rejects.toThrow('Wrong email, phone or password.');
   });
 
   it('a 401 refreshes once (rotating the token) and retries; concurrent calls share one refresh', async () => {

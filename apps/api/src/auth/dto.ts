@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
-  Equals, IsEmail, IsEnum, IsISO31661Alpha2, IsOptional, IsString, Length, Matches, MaxLength, MinLength,
+  Equals, IsEmail, IsEnum, IsISO31661Alpha2, IsOptional, IsString, Length, Matches, MaxLength, MinLength, ValidateIf,
 } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
@@ -59,7 +59,10 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @ApiProperty() @Transform(lower) @IsEmail() email!: string;
+  @ApiPropertyOptional({ description: 'Email or phone number (0803…, +234…). Send this or `email`.' })
+  @ValidateIf((o: LoginDto) => o.email === undefined) @IsString() @MinLength(3) @MaxLength(254) identifier?: string;
+  @ApiPropertyOptional({ description: 'Email (older clients); `identifier` accepts email or phone' })
+  @ValidateIf((o: LoginDto) => o.identifier === undefined) @Transform(lower) @IsEmail() email?: string;
   @ApiProperty() @IsString() @MinLength(1) @MaxLength(128) password!: string;
 }
 

@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { normalisePhone } from '../common/phone';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../common/audit/audit.service';
 import { CryptoService } from '../common/crypto/crypto.service';
@@ -426,9 +427,4 @@ const STATUS_WORDS: Record<string, string> = {
   READY_FOR_DISPATCH: 'ready to send', DISPATCHED: 'on its way', DELIVERED: 'delivered', CANCELLED: 'cancelled', REFUNDED: 'refunded', PARTIALLY_REFUNDED: 'partly refunded',
 };
 
-export function normalisePhone(raw: string): string | null {
-  let p = raw.replace(/[^\d+]/g, '');
-  if (/^0\d{10}$/.test(p)) p = `234${p.slice(1)}`;
-  if (!p.startsWith('+')) p = `+${p}`;
-  return /^\+[1-9]\d{7,14}$/.test(p) ? p : null;
-}
+export { normalisePhone };

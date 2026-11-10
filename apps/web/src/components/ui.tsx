@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { forwardRef, useId } from 'react';
+import { forwardRef, useId, useState } from 'react';
 
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(' ');
 export { cx };
@@ -9,7 +9,7 @@ export { cx };
 // ── Button ──
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-600/50',
+  primary: 'bg-brand-600 text-white hover:brightness-90 active:brightness-[.82] disabled:bg-brand-600/50',
   secondary: 'bg-surface text-ink border border-line-strong hover:bg-sunken disabled:text-ink-4',
   ghost: 'text-ink-2 hover:bg-sunken hover:text-ink disabled:text-ink-4',
   danger: 'bg-surface text-bad border border-line-strong hover:bg-bad-bg disabled:text-ink-4',
@@ -53,6 +53,20 @@ const control =
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...p }, ref) {
   return <input ref={ref} {...p} className={cx(control, 'h-10', className)} />;
+});
+
+/** Password field with a Show / Hide button, so people can check what they typed. */
+export const PasswordInput = forwardRef<HTMLInputElement, Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>>(function PasswordInput({ className, ...p }, ref) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <input ref={ref} {...p} type={visible ? 'text' : 'password'} className={cx(control, 'h-10 pr-16', className)} />
+      <button type="button" onClick={() => setVisible((v) => !v)} aria-label={visible ? 'Hide password' : 'Show password'} aria-pressed={visible}
+        className="absolute inset-y-0 right-0 flex items-center rounded-r-[var(--radius-control)] px-3 text-xs font-semibold text-brand-700 hover:underline focus-visible:outline-offset-[-2px]">
+        {visible ? 'Hide' : 'Show'}
+      </button>
+    </div>
+  );
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...p }, ref) {
@@ -141,7 +155,7 @@ export function Skeleton({ className }: { className?: string }) {
 export function PageLoading({ label = 'Loading' }: { label?: string }) {
   return (
     <div role="status" className="flex min-h-[40vh] items-center justify-center gap-2 text-sm text-ink-3">
-      <Spinner className="size-5 text-brand-600" /> {label}…
+      <Spinner className="size-5 text-brand-700" /> {label}…
     </div>
   );
 }
@@ -175,7 +189,7 @@ export function Logo({ className }: { className?: string }) {
         <path d="M11 9v14h10" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         <circle cx="22" cy="10" r="3" fill="#7ce0ae" />
       </svg>
-      <span>LiveSell<span className="text-brand-600"> Africa</span></span>
+      <span>LiveSell<span className="text-brand-700"> Africa</span></span>
     </span>
   );
 }

@@ -14,7 +14,8 @@ interface AuthState {
   workspace: Workspace | null;
   /** Use a token pair returned by register / accept-invitation. */
   startSession: (t: TokenResponse) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  /** Email or phone number + password. */
+  login: (identifier: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   reload: () => Promise<void>;
   selectTenant: (id: string) => Promise<void>;
@@ -101,8 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await load();
   }, [load]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const t = await api<TokenResponse>('/auth/login', { method: 'POST', body: { email, password }, tenant: false });
+  const login = useCallback(async (identifier: string, password: string) => {
+    const t = await api<TokenResponse>('/auth/login', { method: 'POST', body: { identifier, password }, tenant: false });
     await startSession(t);
   }, [startSession]);
 

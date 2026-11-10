@@ -187,3 +187,79 @@ Both stores use `africa.livesell.seller`. It matches the package in your `google
 - regenerated: assets
 
 **Docs:** `docs/STORE-LISTING.md`, `docs/DEPLOYMENT.md` (mobile section), `.env.example`.
+
+---
+
+# Mobile round 3 (2026-11-10): phone sign-in, biometrics, dark mode, customisation
+
+## Status
+
+| Check | Result |
+|---|---|
+| API unit | 128 / 128 |
+| API e2e | **217 / 217** (+1: sign in with email or phone); 4 opt-in live-Veltrix tests skipped |
+| Mobile `tsc`, jest | clean, **14 / 14** (+ theme palette) |
+| Mobile `expo-doctor` | 20 / 20; Android bundle ok |
+| Web `tsc`, vitest, `next build` | clean, **31 / 31** (+ theme boot script), build ok |
+| **On a device** | not yet: needs a new build (new native module `expo-local-authentication`) |
+
+## Sign in with email or phone (API, web, app)
+
+- `POST /auth/login` takes `identifier` (an email, or a phone in any common format: `0803…`, `234 803…`, `+234…`).
+  Older clients still send `email`.
+- Phones are unique per user (existing constraint) and normalised with `src/common/phone.ts`.
+- Wrong password, unknown account and junk input all get the same answer, after the same argon2 work.
+- Failed-login audit records `email` or `phone`.
+
+## App
+
+**Sign-in screen:**
+- email or phone, with a phone keypad when the entry starts with a digit;
+- **Show / Hide password**;
+- **Remember my email or phone**, stored in the secure store. The password is never stored.
+
+**Biometric unlock:**
+- After the first password sign-in, the app offers fingerprint / face unlock. Turning it on needs a successful scan.
+- When it's on, the saved session opens only after a scan:
+  - on app start;
+  - when coming back after 5 minutes away.
+- The device PIN is offered as the OS fallback. "Sign in with password" ends the session on the phone.
+- The switch is in More.
+- The session is still the rotating refresh token. Biometrics gate opening it; no credentials are stored.
+
+**Appearance** (More → Appearance, saved on the phone):
+- theme: Match phone / Light / Dark;
+- 5 accent colours, all ≥ 4.5:1 contrast in both modes (checked);
+- 3D (raised cards, lifted buttons, spring press) or Flat cards;
+- the screen the app opens on: Today, Orders, Live or Stock.
+
+**3D brand mark** (`src/components/hero.tsx`): floating perspective tiles on the sign-in and lock screens.
+- Built with React Native Animated on the native driver.
+- Respects "reduce motion".
+- No new 3D library.
+
+**Theming:**
+- The `c` tokens (`src/lib/tokens.ts`) are rewritten by `src/lib/theme.tsx`; every screen subscribes with
+  `useTheme()`.
+- Navigation headers, the tab bar and the status bar follow the theme.
+
+**Responsive:** content is centred at a readable width on tablets and wide phones.
+
+## Web
+
+- **Sign-in:** email or phone, Show / Hide password, "Remember my email or phone" (localStorage, email/phone only).
+- **Show / Hide** on every other password field too: register, reset, invite.
+- **Dark mode:**
+  - the same tokens with dark values in `globals.css`;
+  - follows the device, or Auto / Light / Dark from the toggle in the seller sidebar, the auth pages and the admin
+    header;
+  - a pre-paint script applies the saved choice, so the page never flashes;
+  - text pairs checked for AA contrast.
+- **Brand colours:** brand-700/800 (text) become light greens in dark mode; filled brand buttons keep white text.
+  - The primary button's hover now darkens with `brightness`.
+  - A few `text-brand-600` uses became `text-brand-700`.
+
+## Not built
+
+- **Biometric sign-in on the web (passkeys / WebAuthn):** not built. The web keeps password + "remember me".
+- **Visual review:** the dark mode screens haven't been reviewed on a device or in a browser yet.

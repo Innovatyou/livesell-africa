@@ -118,10 +118,11 @@ export async function api<T = unknown>(path: string, opts: { method?: 'GET' | 'P
   return body as T;
 }
 
-export async function login(email: string, password: string) {
-  const res = await raw('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }), tenant: false });
+/** Sign in with an email or a phone number (the server accepts 0803…, +234… and emails). */
+export async function login(identifier: string, password: string) {
+  const res = await raw('/auth/login', { method: 'POST', body: JSON.stringify({ identifier, password }), tenant: false });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, res.status === 401 ? 'Wrong email or password.' : messageOf(res.status, body), (body as { code?: string }).code, body);
+  if (!res.ok) throw new ApiError(res.status, res.status === 401 ? 'Wrong email, phone or password.' : messageOf(res.status, body), (body as { code?: string }).code, body);
   await store(body as SessionBody);
 }
 

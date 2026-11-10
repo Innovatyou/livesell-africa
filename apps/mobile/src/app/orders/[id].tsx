@@ -5,6 +5,7 @@ import { Badge, Button, Card, ErrorBox, Field, Loading, Muted, Notice, Row, Scre
 import { api } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { ACTION_LABEL, holdLabel, money, ORDER_STATUS, toKobo, when } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Txn { id: string; provider: string; status: string; grossMinor: string; currency: string; transferEvidence: { payerName?: string; payerBank?: string; payerReference?: string } | null; createdAt: string }
 interface Order {
@@ -16,6 +17,7 @@ interface Order {
 
 /** One order: items, customer, payment and the next steps — the same rules as the web (the API enforces them). */
 export default function OrderScreen() {
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { can } = useAuth();
   const res = useApi<Order>(`/orders/${id}`);

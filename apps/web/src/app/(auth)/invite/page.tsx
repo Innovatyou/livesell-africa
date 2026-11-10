@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { Alert, Button, ButtonLink, Card, Field, Input, PageLoading } from '@/components/ui';
+import { Alert, Button, ButtonLink, Card, Field, Input, PageLoading, PasswordInput } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { rememberTenant, useAuth } from '@/lib/auth';
 import { E164, PASSWORD, PASSWORD_HINT, normalisePhone } from '@/lib/nav';
@@ -98,7 +98,7 @@ function Invite() {
           <form onSubmit={acceptNew} className="space-y-4">
             <Field label="Your full name">{(p) => <Input {...p} autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} />}</Field>
             <Field label="Phone number (optional)" error={phoneInvalid}>{(p) => <Input {...p} type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />}</Field>
-            <Field label="Create a password" hint={PASSWORD_HINT} error={pwInvalid}>{(p) => <Input {...p} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>
+            <Field label="Create a password" hint={PASSWORD_HINT} error={pwInvalid}>{(p) => <PasswordInput {...p} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>
             <label className="flex items-start gap-2 text-sm text-ink-2">
               <input type="checkbox" className="mt-0.5 size-4 accent-[var(--color-brand-600)]" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
               <span>I accept the <Link href="/terms" target="_blank" className="font-medium text-brand-700 hover:underline">terms of service</Link> and <Link href="/privacy" target="_blank" className="font-medium text-brand-700 hover:underline">privacy policy</Link></span>

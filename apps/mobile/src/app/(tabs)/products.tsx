@@ -4,11 +4,13 @@ import { Pressable, Text, TextInput } from 'react-native';
 import { Badge, Button, Card, Empty, ErrorBox, Loading, Muted, Row, Screen, c } from '@/components/ui';
 import { useApi, useAuth } from '@/lib/auth';
 import { money } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Product { id: string; name: string; productCode: string; status: string; priceMin: string | null; priceMax: string | null; available: number; lowStock: boolean; outOfStock: boolean }
 
 /** Stock at a glance; tap a product to edit it, its photos and its stock. */
 export default function Products() {
+  useTheme();
   const { can } = useAuth();
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');

@@ -3,12 +3,14 @@ import { Linking, Pressable, Switch, Text, View } from 'react-native';
 import { Button, Card, Field, Muted, Notice, Screen, c } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { e164, isE164 } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 const WEB = 'https://app.livesell.africa';
 const CATEGORIES = ['Fashion', 'Beauty', 'Electronics', 'Food', 'Home', 'Other'];
 
 /** Create a store from the phone — the same fields and rules as the web sign-up (the API validates everything). */
 export default function Signup() {
+  useTheme();
   const { signup } = useAuth();
   const [f, setF] = useState({ businessName: '', ownerFullName: '', email: '', phone: '', storeUsername: '', state: '', city: '', businessAddress: '', businessCategory: 'Fashion', password: '' });
   const [registered, setRegistered] = useState(false);

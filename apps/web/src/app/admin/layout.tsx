@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Alert, Button, Logo, PageLoading } from '@/components/ui';
@@ -38,6 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className={pathname === href || (href !== '/admin' && pathname.startsWith(href)) ? 'font-semibold text-brand-700' : 'hover:text-brand-700'}>{label}</Link>
             ))}
             <Link href="/dashboard" className="text-ink-3 hover:text-ink">My store</Link>
+            <ThemeToggle />
             <Button size="sm" variant="ghost" onClick={() => void logout()}>Sign out</Button>
           </nav>
         </div>

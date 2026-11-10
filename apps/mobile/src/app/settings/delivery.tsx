@@ -4,6 +4,7 @@ import { Badge, Button, Card, ErrorBox, Field, Loading, Muted, Notice, Row, Scre
 import { api } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { e164, isE164, money, toKobo } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Settings {
   settings: { pickupEnabled: boolean; pickupAddress: string | null; pickupInstructions: string | null; deliverOutsideZones: boolean };
@@ -13,6 +14,7 @@ interface Settings {
 
 /** Pickup, delivery zones and your couriers (the server prices every order from these). */
 export default function DeliverySettings() {
+  useTheme();
   const { can } = useAuth();
   const res = useApi<Settings>('/delivery/settings');
   const edit = can('delivery:manage');

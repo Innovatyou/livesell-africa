@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { Alert, Button, ButtonLink, Card, Field, Input, PageLoading } from '@/components/ui';
+import { Alert, Button, ButtonLink, Card, Field, Input, PageLoading, PasswordInput } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { PASSWORD, PASSWORD_HINT } from '@/lib/nav';
 
@@ -52,8 +52,8 @@ function ResetForm() {
       ) : (
         <form onSubmit={submit} className="mt-6 space-y-4">
           {error && <Alert tone="bad">{error} {error.includes('expired') && <Link href="/forgot-password" className="font-medium underline">Request a new link</Link>}</Alert>}
-          <Field label="New password" hint={PASSWORD_HINT} error={invalid}>{(p) => <Input {...p} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>
-          <Field label="Confirm new password" error={mismatch}>{(p) => <Input {...p} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />}</Field>
+          <Field label="New password" hint={PASSWORD_HINT} error={invalid}>{(p) => <PasswordInput {...p} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>
+          <Field label="Confirm new password" error={mismatch}>{(p) => <PasswordInput {...p} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />}</Field>
           <Button type="submit" className="w-full" loading={busy} disabled={!password || !!invalid || !!mismatch || !confirm}>Update password</Button>
         </form>
       )}

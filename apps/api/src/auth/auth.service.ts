@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { normalisePhone } from '../common/phone';
 import * as argon2 from 'argon2';
 import { AuditService } from '../common/audit/audit.service';
 import { CryptoService } from '../common/crypto/crypto.service';
@@ -100,15 +101,19 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, meta: ClientMeta) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    // Sign in with email or phone (unique per user); anything unrecognisable simply finds nobody.
+    const id = (dto.identifier ?? dto.email ?? '').trim();
+    const phone = id.includes('@') ? null : normalisePhone(id);
+    const where = id.includes('@') ? { email: id.toLowerCase() } : phone ? { phone } : null;
+    const user = where ? await this.prisma.user.findUnique({ where }) : null;
     // Always run argon2 so response time doesn't reveal whether the email exists.
     const ok = user
       ? await argon2.verify(user.passwordHash, dto.password)
       : (await argon2.verify(await this.getDummyHash(), dto.password), false);
 
     if (!user || !ok || user.status === 'SUSPENDED') {
-      await this.audit.record({ action: 'auth.login_failed', actorId: user?.id, metadata: { email: dto.email }, ip: meta.ip, userAgent: meta.userAgent });
-      throw new UnauthorizedException('Invalid email or password');
+      await this.audit.record({ action: 'auth.login_failed', actorId: user?.id, metadata: where ?? { identifier: id.slice(0, 64) }, ip: meta.ip, userAgent: meta.userAgent });
+      throw new UnauthorizedException('Invalid email, phone or password');
     }
     if (argon2.needsRehash(user.passwordHash, ARGON)) {
       await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: await argon2.hash(dto.password, ARGON) } });

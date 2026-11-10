@@ -58,6 +58,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#0e7a4d"
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "LiveSell uses Face ID so you can open the app without typing your password."
+        }
       ]
     ],
     "scheme": "livesell",

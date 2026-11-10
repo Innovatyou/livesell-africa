@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Card, Empty, ErrorBox, Loading, Muted, Row, Screen, c } from '@/components/ui';
 import { useApi } from '@/lib/auth';
 import { money } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Report {
   currency: string; range: { from: string; to: string };
@@ -19,6 +20,7 @@ const change = (b: number | null) => (b === null ? '' : ` (${b >= 0 ? '+' : '−
 
 /** Sales analytics (Professional plan and up), compared with the period before. Real data only. */
 export default function Analytics() {
+  useTheme();
   const [days, setDays] = useState(30);
   const now = new Date();
   const res = useApi<Report>(`/analytics?from=${lagosDay(new Date(now.getTime() - (days - 1) * 86_400_000))}&to=${lagosDay(now)}`);

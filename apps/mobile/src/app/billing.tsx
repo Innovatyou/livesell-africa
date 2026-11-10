@@ -5,6 +5,7 @@ import { Badge, Button, Card, ErrorBox, Loading, Muted, Notice, Row, Screen, c }
 import { api } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { money } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Overview {
   subscription: { status: string; currentPeriodEnd: string; trialEndsAt: string | null; plan: { name: string; pricingModel: string; commissionBps: number | null } } | null;
@@ -16,6 +17,7 @@ const day = (s: string) => new Intl.DateTimeFormat('en-NG', { day: 'numeric', mo
 
 /** Plan, commission and open invoices. Paying opens LiveSell's secure checkout; the invoice is marked paid only after the server verifies it. */
 export default function Billing() {
+  useTheme();
   const { can } = useAuth();
   const ov = useApi<Overview>(can('billing:manage') ? '/billing/subscription' : null);
   const com = useApi<Commission>(can('billing:manage') ? '/billing/commission' : null);

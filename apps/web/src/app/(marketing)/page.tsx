@@ -75,10 +75,10 @@ export default function LandingPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-        <div className="flex flex-col items-start justify-between gap-6 rounded-[var(--radius-card)] bg-brand-800 px-6 py-10 text-white sm:flex-row sm:items-center sm:px-10">
+        <div className="flex flex-col items-start justify-between gap-6 rounded-[var(--radius-card)] bg-brand-900 px-6 py-10 text-white sm:flex-row sm:items-center sm:px-10">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">Ready for your next live?</h2>
-            <p className="mt-1 text-brand-100">Set up your store today. Free for 14 days.</p>
+            <p className="mt-1 text-white/80">Set up your store today. Free for 14 days.</p>
           </div>
           <ButtonLink href="/register" size="lg" variant="secondary">Create your store</ButtonLink>
         </div>

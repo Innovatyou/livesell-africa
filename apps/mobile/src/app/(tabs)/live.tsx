@@ -3,10 +3,12 @@ import { Pressable, Text } from 'react-native';
 import { Badge, Card, Empty, ErrorBox, Loading, Muted, Row, Screen, c } from '@/components/ui';
 import { useApi } from '@/lib/auth';
 import { money, when } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Session { id: string; title: string; status: string; scheduledAt: string; channel: { name: string }; _count: { orders: number }; paidOrders: number; revenueMinor: string }
 
 export default function Live() {
+  useTheme();
   const upcoming = useApi<{ items: Session[] }>('/live-sessions?when=upcoming&pageSize=20');
   const past = useApi<{ items: Session[] }>('/live-sessions?when=past&pageSize=10');
   const reload = () => { void upcoming.reload(); void past.reload(); };

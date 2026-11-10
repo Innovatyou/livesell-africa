@@ -6,6 +6,7 @@ import { Badge, Button, Card, ErrorBox, Field, Loading, Muted, Notice, Row, Scre
 import { api } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { money, toKobo } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Variant { id: string; name: string; attributes: Record<string, string>; priceMinor: string; isActive: boolean; inventory: { onHand: number; reserved: number; available: number } }
 interface Product { id: string; name: string; productCode: string; description: string | null; status: string; media: Array<{ key: string; type: 'image' | 'video'; url: string }>; variants: Variant[] }
@@ -13,6 +14,7 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 /** Create (`new`) or edit a product: photos, name, code, price, status, stock. Products with options keep their options. */
 export default function ProductScreen() {
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === 'new';
   const { can } = useAuth();

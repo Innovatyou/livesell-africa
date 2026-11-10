@@ -6,6 +6,7 @@ import { api, ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { e164, isE164, money } from '@/lib/format';
 import { discard, enqueue, flush, list as listQueue, newClientRef, retryable, type QueuedOrder } from '@/lib/offline-queue';
+import { useTheme } from '@/lib/theme';
 
 interface Session {
   id: string; title: string; status: string; orderInstructions: string | null; channel: { name: string };
@@ -18,6 +19,7 @@ interface VariantChoice { sku: string; name: string }
  * method, MASTER-SPEC §9). Prices come from the server; stock is reserved the moment the order is saved.
  */
 export default function LiveConsole() {
+  useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { can, workspace } = useAuth();
   const res = useApi<Session>(`/live-sessions/${id}`);

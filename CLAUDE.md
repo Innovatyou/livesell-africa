@@ -67,7 +67,9 @@ Read this file, `docs/MASTER-SPEC.md`, `docs/ARCHITECTURE.md` and `docs/PHASE-1.
   token in memory); Today, Orders + order actions (transfer confirm, delivery, reminder), Live console (orders by product code), Stock,
   store switcher; round 2: push (`src/push/`, Expo push service via outbox; `/me/devices`), offline order queue (`orders.client_ref` idempotency),
   sign-up, product edit/photos/stock, settings, analytics, billing in-app, branding, `docs/STORE-LISTING.md`. Mobile jest 12/12; API unit 128/128,
-  e2e 216/216. Not device-tested; FCM/APNs keys and `eas init` pending.
+  e2e 216/216. Round 3: login with email or phone (`identifier`, `src/common/phone.ts`), biometric unlock (expo-local-authentication),
+  dark mode + accent/3D/start-screen customisation (`src/lib/theme.tsx`), web dark mode + show-password + remember-me. API e2e 217/217,
+  mobile jest 14/14, web 31/31. Not device-tested.
 - Commission invoices are debts for past sales: never void them in plan changes or expiry, and paying one never changes the plan.
 - Delivery fees for customer orders are computed server-side only; never accept a fee from the storefront or WhatsApp client.
 - Order messages come only from the outbox (`customerEvent()` in `orders.service.ts`); never send order updates from controllers.

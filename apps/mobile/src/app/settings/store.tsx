@@ -4,12 +4,14 @@ import { Button, Card, ErrorBox, Field, Loading, Muted, Notice, Row, Screen, c }
 import { api } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { e164, isE164 } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Profile { businessName: string; storefront: { description: string | null; whatsappNumber: string | null; contactPhone: string | null } | null }
 interface Prefs { enabled: boolean }
 
 /** Store profile (what customers see) and whether LiveSell messages customers automatically. */
 export default function StoreSettings() {
+  useTheme();
   const { can } = useAuth();
   const profile = useApi<Profile>('/store/profile');
   const prefs = useApi<Prefs & Record<string, unknown>>(can('store:manage') ? '/notifications/preferences' : null);

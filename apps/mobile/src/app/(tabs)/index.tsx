@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Card, Empty, ErrorBox, Loading, Muted, Row, Screen, c } from '@/components/ui';
 import { useApi, useAuth } from '@/lib/auth';
 import { money, when } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 
 interface Summary {
   currency: string; salesTodayMinor: string; salesThisMonthMinor: string; totalOrders: number; paidOrders: number;
@@ -13,6 +14,7 @@ interface Summary {
 
 /** MASTER-SPEC §7 dashboard, the seller's “today” view. Real data only. */
 export default function Today() {
+  useTheme();
   const { can } = useAuth();
   const res = useApi<Summary>(can('reports:read') ? '/dashboard/summary' : null);
   if (!can('reports:read')) return <Screen><Empty title="Your role can’t see sales figures" hint="Use Orders and Live to work." /></Screen>;

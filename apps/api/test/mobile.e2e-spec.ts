@@ -171,4 +171,20 @@ describe('Mobile app backend — push notifications, offline-safe orders, mobile
     await http.post('/api/v1/auth/logout').set('X-Client-Type', 'mobile').send({ refreshToken: refreshed.refreshToken }).expect(204);
     await http.post('/api/v1/auth/refresh').set('X-Client-Type', 'mobile').send({ refreshToken: refreshed.refreshToken }).expect(401);
   });
+
+  it('sign in with email or phone (any common format); wrong or unknown details get the same answer', async () => {
+    const { body } = await register();
+    const login = (b: object) => http.post('/api/v1/auth/login').set('X-Client-Type', 'mobile').send(b);
+    const local = `0${body.phone.slice(4)}`; // +23481… → 081…
+    for (const identifier of [body.phone, local, `234 ${body.phone.slice(4)}`, body.email.toUpperCase()]) {
+      const r = await login({ identifier, password: 'CorrectHorse42' }).expect(200);
+      expect(r.body.refreshToken).toBeTruthy();
+    }
+    await login({ email: body.email, password: 'CorrectHorse42' }).expect(200); // older clients
+    const wrong = await login({ identifier: local, password: 'WrongHorse42' }).expect(401);
+    const unknown = await login({ identifier: '08000000001', password: 'CorrectHorse42' }).expect(401);
+    const junk = await login({ identifier: 'not-a-phone', password: 'CorrectHorse42' }).expect(401);
+    expect(new Set([wrong.body.message, unknown.body.message, junk.body.message]).size).toBe(1);
+    await login({ password: 'CorrectHorse42' }).expect(400);
+  });
 });
