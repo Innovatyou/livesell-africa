@@ -181,7 +181,7 @@ Until then, sellers use their own riders or couriers (already built).
 |---|---|
 | **Today** | Greeting hero with sales today and this month. Quick actions: Go live, Add product, Orders, Learn. Icon stat tiles (awaiting payment and to fulfil open the filtered orders). Academy progress card. Ranked top products. Payment rows with status icons |
 | **Orders** | Search bar. Filter chips. Rows with customer initials, reference, live session, hold time, amount and status. Empty state offers to start a live |
-| **Stock** | Search. Chips: All / Running low / Sold out (new server-side `stock` filter in the query). Stock-coloured icons |
+| **Stock** | Search. Chips: All / Running low / Sold out (uses the existing `stock` query filter). Stock-coloured icons |
 | **Live** | "You're live" hero with a button to the console. Platform icons (TikTok, Instagram, Facebook, YouTube, WhatsApp). Empty state links to the Academy |
 | **More** | Profile hero. Settings grouped: Learn, Store, Money, Team, App. Each row has an icon and a one-line hint. Notifications and biometric switches under "This phone" |
 
