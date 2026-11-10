@@ -18,12 +18,58 @@ export function slugify(input: string, max = 80): string {
 export const PRODUCT_CODE = /^[A-Z0-9][A-Z0-9-]{1,19}$/;
 
 /** Letters-only prefix for generated codes: the category's first word, else the product name's last word. */
+/**
+ * Short code prefix from what the product *is*: "Red Leather Handbag" → BAG, "Ladies Block Heels Size 39" → HEEL,
+ * "Set of 3 Wigs" → WIG, "Vitamin C Face Serum" → SERUM. Picks the head noun (skipping colours, sizes, materials and
+ * marketing words), maps common items to familiar codes, else uses the noun's first 5 letters; the category only when
+ * the name says nothing usable. Sellers can always type their own code.
+ */
 export function codePrefix(productName: string, categoryName?: string | null): string {
-  const words = (s: string) => s.normalize('NFKD').toUpperCase().replace(/[^A-Z ]+/g, ' ').split(/\s+/).filter((w) => w.length >= 2);
-  const fromCategory = categoryName ? words(categoryName)[0] : undefined;
-  const nameWords = words(productName);
-  const pick = fromCategory ?? nameWords[nameWords.length - 1] ?? 'ITEM';
-  return pick.slice(0, 5);
+  const words = (s: string) =>
+    s.normalize('NFKD').toUpperCase().replace(/\p{M}/gu, '').replace(/['’]S\b/g, '').replace(/[^A-Z ]+/g, ' ').split(/\s+/).filter((w) => w.length >= 2);
+  const fromName = headNoun(words(productName));
+  if (fromName) return fromName;
+  const fromCategory = headNoun(words(categoryName ?? ''));
+  return fromCategory ?? 'ITEM';
+}
+
+const singular = (w: string) => (w.length > 4 && /(SS|US|IS)$/.test(w) ? w : w.replace(/(CH|SH|SS|X)ES$/, '$1').replace(/IES$/, 'Y').replace(/([^S])S$/, '$1'));
+
+/** Common things Nigerian social sellers list, mapped to the codes they already say on live. */
+const KNOWN: Record<string, string> = {
+  BAG: 'BAG', HANDBAG: 'BAG', PURSE: 'BAG', TOTE: 'TOTE', BACKPACK: 'BPACK', CLUTCH: 'CLTCH', WALLET: 'WALLT',
+  SHOE: 'SHOE', SNEAKER: 'SNEAK', TRAINER: 'SNEAK', HEEL: 'HEEL', SANDAL: 'SANDL', SLIPPER: 'SLIP', SLIDE: 'SLIDE', BOOT: 'BOOT', LOAFER: 'LOAFR', PALM: 'PALM',
+  DRESS: 'DRESS', GOWN: 'GOWN', ABAYA: 'ABAYA', KAFTAN: 'KFTAN', BUBU: 'BUBU', AGBADA: 'AGBDA', SENATOR: 'SNATR', JUMPSUIT: 'JUMP', SKIRT: 'SKIRT',
+  TOP: 'TOP', BLOUSE: 'BLOUS', SHIRT: 'SHIRT', TSHIRT: 'TEE', TEE: 'TEE', POLO: 'POLO', HOODIE: 'HOODY', JACKET: 'JCKT', TROUSER: 'TROUS', PANT: 'PANTS',
+  JEAN: 'JEANS', SHORT: 'SHORT', JOGGER: 'JOGGR', BRA: 'BRA', LINGERIE: 'LINGR', BOXER: 'BOXER', PYJAMA: 'PJS', NIGHTWEAR: 'NIGHT',
+  WIG: 'WIG', BUNDLE: 'HAIR', HAIR: 'HAIR', FRONTAL: 'FRONT', CLOSURE: 'CLOSE', LACE: 'LACE', BRAID: 'BRAID',
+  WATCH: 'WATCH', RING: 'RING', EARRING: 'EAR', NECKLACE: 'NECK', CHAIN: 'CHAIN', BRACELET: 'BRACE', ANKLET: 'ANKLT', SUNGLASSE: 'SHADE', GLASSE: 'GLASS', CAP: 'CAP', HAT: 'HAT', BELT: 'BELT', SCARF: 'SCARF',
+  PERFUME: 'PERF', FRAGRANCE: 'PERF', OIL: 'OIL', CREAM: 'CREAM', LOTION: 'LOTN', SERUM: 'SERUM', SOAP: 'SOAP', SCRUB: 'SCRUB', LIPSTICK: 'LIP', LIPGLOSS: 'GLOSS', GLOS: 'GLOSS',
+  FOUNDATION: 'FOUND', POWDER: 'POWDR', LASH: 'LASH', NAIL: 'NAIL', SPRAY: 'SPRAY', SHAMPOO: 'SHAMP', CONDITIONER: 'COND',
+  PHONE: 'PHONE', CASE: 'CASE', CHARGER: 'CHRGR', EARBUD: 'BUDS', EARPHONE: 'BUDS', HEADPHONE: 'HEAD', SPEAKER: 'SPKR', POWERBANK: 'PBANK', LAPTOP: 'LAPTP', TABLET: 'TAB', CABLE: 'CABLE',
+  BLENDER: 'BLEND', POT: 'POT', PLATE: 'PLATE', CUP: 'CUP', FLASK: 'FLASK', BEDSHEET: 'SHEET', DUVET: 'DUVET', PILLOW: 'PILLW', CURTAIN: 'CURTN', RUG: 'RUG',
+  FABRIC: 'FABRC', ANKARA: 'ANKRA', ASOEBI: 'ASOEB', AGBADA_: 'AGBDA', TOY: 'TOY', DIAPER: 'DIAPR', SNACK: 'SNACK', DRINK: 'DRINK', TEA: 'TEA', HONEY: 'HONEY',
+};
+
+/** Words that describe a product rather than name it. */
+const MODIFIERS = new Set(('RED BLACK WHITE BLUE GREEN PINK PURPLE BROWN GOLD GOLDEN SILVER GREY GRAY BEIGE NAVY YELLOW ORANGE NUDE CREAMY MULTI COLOUR COLOR ' +
+  'XS XL XXL XXXL SMALL MEDIUM LARGE BIG MINI MAXI MIDI SIZE INCH INCHES CM ML GRAM KG LITRE LITER PIECE PCS PC ' +
+  'NEW ORIGINAL QUALITY PREMIUM CLASSIC LUXURY LUXURIOUS UNISEX MEN MENS WOMEN WOMENS LADIES LADY KIDS KID BOYS GIRLS BABY FEMALE MALE PLAIN ' +
+  'LEATHER SUEDE COTTON SILK LINEN DENIM WOOL VELVET SATIN CHIFFON GENUINE FAUX HUMAN BRAZILIAN PERUVIAN STRAIGHT CURLY WAVY BODY DEEP ' +
+  'HOT SALE OFFER DEAL BEST TOP_ FASHION FASHIONABLE STYLISH TRENDY ELEGANT CUTE SEXY QUALITY AND THE WITH FOR OF IN BY FROM NEW_ ' +
+  'SET PACK PAIR PAIRS BOX COMBO BUNDLE_ DOZEN').split(/\s+/));
+const CONTAINERS = new Set(['SET', 'PACK', 'PAIR', 'PAIRS', 'BOX', 'COMBO', 'DOZEN']);
+
+function headNoun(all: string[]): string | null {
+  if (!all.length) return null;
+  // "Bag with strap" → before the preposition; "Set of 3 wigs" → after it (the set is the container, not the thing).
+  const cut = all.findIndex((w) => ['WITH', 'FOR', 'OF', 'IN', 'BY', 'FROM'].includes(w));
+  let part = cut > 0 ? all.slice(0, cut) : all;
+  if (cut > 0 && part.every((w) => CONTAINERS.has(w) || MODIFIERS.has(w))) part = all.slice(cut + 1);
+  const nouns = part.map(singular).filter((w) => !MODIFIERS.has(w) && !MODIFIERS.has(w + 'S'));
+  if (!nouns.length) return null;
+  for (let i = nouns.length - 1; i >= 0; i--) if (KNOWN[nouns[i]]) return KNOWN[nouns[i]];
+  return nouns[nouns.length - 1].slice(0, 5);
 }
 
 /**

@@ -6,7 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 
 const NOT_FOUND = 'Store not found';
-type Availability = 'in_stock' | 'low_stock' | 'out_of_stock';
+/** `preorder`: none in stock, but the store sells pre-orders (Phase 14), so it can still be ordered. */
+type Availability = 'in_stock' | 'low_stock' | 'out_of_stock' | 'preorder';
 
 /**
  * Public storefront API (MASTER-SPEC §10). Read-only and unauthenticated, so it exposes only what a customer should
@@ -38,7 +39,7 @@ export class StorefrontPublicService {
   }
 
   async products(slug: string, q: { search?: string; category?: string; sort?: 'newest' | 'price_asc' | 'price_desc'; page?: number; pageSize?: number }) {
-    const { tenant } = await this.resolve(slug);
+    const { tenant, settings } = await this.resolve(slug);
     const t = Prisma.sql`${tenant.id}::uuid`;
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 24;
@@ -76,7 +77,7 @@ export class StorefrontPublicService {
       return {
         name: r.name, slug: r.slug, productCode: r.productCode, category: r.categoryName,
         priceMinor: r.priceMin, compareAtMinor: r.regularMin > r.priceMin ? r.regularMin : null,
-        availability: availability(r.available, r.lowThreshold),
+        availability: availability(r.available, r.lowThreshold, settings.allowPreorders),
         imageUrl: image ? await this.storage.readUrl(image.key, 'product-image') : null,
       };
     }));
@@ -103,12 +104,13 @@ export class StorefrontPublicService {
       },
     });
     if (!p || !p.variants.length) throw new NotFoundException('Product not found');
+    const preorders = !!(await this.prisma.forTenant(tenantId).storefrontSettings.findFirst({ select: { allowPreorders: true } }))?.allowPreorders;
     const media = await Promise.all(((p.media as unknown as MediaEntry[]) ?? []).map(async (m) => ({
       type: m.type, alt: m.alt ?? p.name, url: await this.storage.readUrl(m.key, m.type === 'video' ? 'product-video' : 'product-image'),
     })));
     const variants = p.variants.map((v) => {
       const available = Math.max(0, (v.inventory?.onHand ?? 0) - (v.inventory?.reserved ?? 0));
-      const state = availability(available, p.lowStockThreshold);
+      const state = availability(available, p.lowStockThreshold, preorders);
       return {
         id: v.id, name: v.name, sku: v.sku, attributes: v.attributes as Record<string, string>,
         priceMinor: v.promoPriceMinor ?? v.priceMinor, compareAtMinor: v.promoPriceMinor !== null ? v.priceMinor : null,
@@ -158,6 +160,6 @@ export class StorefrontPublicService {
   }
 }
 
-function availability(available: number, threshold: number): Availability {
-  return available <= 0 ? 'out_of_stock' : available <= threshold ? 'low_stock' : 'in_stock';
+function availability(available: number, threshold: number, preorders = false): Availability {
+  return available <= 0 ? (preorders ? 'preorder' : 'out_of_stock') : available <= threshold ? 'low_stock' : 'in_stock';
 }

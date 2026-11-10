@@ -72,7 +72,7 @@ export class OnboardingService {
         },
       }),
       this.prisma.forTenant(tenantId).storefrontSettings.findFirstOrThrow({
-        select: { logoKey: true, description: true, contactEmail: true, contactPhone: true, whatsappNumber: true, socialLinks: true, isPublished: true },
+        select: { logoKey: true, description: true, contactEmail: true, contactPhone: true, whatsappNumber: true, socialLinks: true, isPublished: true, allowPreorders: true },
       }),
     ]);
     const { logoKey, ...rest } = store;
@@ -86,6 +86,7 @@ export class OnboardingService {
     const storeData = {
       description: dto.description, contactEmail: dto.contactEmail, contactPhone: dto.contactPhone, whatsappNumber: dto.whatsappNumber,
       socialLinks: dto.socialLinks ? (stripUndefined({ ...dto.socialLinks }) as Prisma.InputJsonObject) : undefined,
+      allowPreorders: dto.allowPreorders,
     };
     await this.prisma.forTenant(t.tenantId).$transaction(async (tx) => {
       // Tenant is the workspace row itself; its id comes from the validated tenant context, never from input.

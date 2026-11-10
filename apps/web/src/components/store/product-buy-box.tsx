@@ -62,6 +62,7 @@ export function ProductBuyBox({ store, product, ordering = null }: { store: Publ
       <p role="status" className="text-sm">
         {!variant ? <span className="text-ink-3">This combination isn&apos;t available.</span>
           : variant.availability === 'out_of_stock' ? <span className="font-medium text-bad">Sold out</span>
+          : variant.availability === 'preorder' ? <span className="font-medium text-info">Pre-order: ships when it&apos;s back in stock</span>
           : variant.availability === 'low_stock' ? <span className="font-medium text-warn">Only {variant.onlyLeft} left</span>
           : <span className="text-good">In stock</span>}
       </p>

@@ -70,6 +70,12 @@ Read this file, `docs/MASTER-SPEC.md`, `docs/ARCHITECTURE.md` and `docs/PHASE-1.
   e2e 216/216. Round 3: login with email or phone (`identifier`, `src/common/phone.ts`), biometric unlock (expo-local-authentication),
   dark mode + accent/3D/start-screen customisation (`src/lib/theme.tsx`), web dark mode + show-password + remember-me. API e2e 217/217,
   mobile jest 14/14, web 31/31. Not device-tested.
+- Phase 14 BUILT, awaiting sign-off (see `docs/PHASE-14.md`): everything in the mobile app (create/go-live sessions, team & roles, payments +
+  bank accounts, customer messages, plan change, product options, PDF verification); pre-orders (`storefront_settings.allow_preorders`,
+  `order_items.backordered_qty`, oldest-first fill on restock, dispatch blocked with 409 AWAITING_STOCK); smart product codes (`codePrefix` head noun);
+  roles DISPATCHER / ACCOUNTANT / CUSTOMER_CARE (backfilled at boot). Kwik assessed, blocked on Kwik API access + geocoding. API unit 129/129,
+  e2e 221/221, mobile jest 14/14, web 31/31.
+- Pre-order units are never reserved: release/commit only `quantity - backorderedQty` (`held()` in orders.service); never ship while backordered.
 - Commission invoices are debts for past sales: never void them in plan changes or expiry, and paying one never changes the plan.
 - Delivery fees for customer orders are computed server-side only; never accept a fee from the storefront or WhatsApp client.
 - Order messages come only from the outbox (`customerEvent()` in `orders.service.ts`); never send order updates from controllers.

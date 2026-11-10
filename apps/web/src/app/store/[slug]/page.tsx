@@ -8,7 +8,7 @@ import type { Availability } from '@/lib/types';
 type Params = Promise<{ slug: string }>;
 type Search = Promise<{ q?: string; category?: string; sort?: string; page?: string }>;
 
-const AVAIL: Record<Availability, string> = { in_stock: '', low_stock: 'Few left', out_of_stock: 'Sold out' };
+const AVAIL: Record<Availability, string> = { in_stock: '', low_stock: 'Few left', out_of_stock: 'Sold out', preorder: 'Pre-order' };
 
 export default async function StorePage({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { slug } = await params;

@@ -69,7 +69,7 @@ function OrderDetail() {
             <tbody className="divide-y divide-line">
               {o.items.map((i) => (
                 <tr key={i.id}>
-                  <td className="px-5 py-3"><span className="font-mono text-[12px] text-ink-3">{i.productCode ?? i.sku}</span> {i.productName}{i.variantName !== 'Default' && <span className="text-ink-3"> · {i.variantName}</span>}</td>
+                  <td className="px-5 py-3"><span className="font-mono text-[12px] text-ink-3">{i.productCode ?? i.sku}</span> {i.productName}{i.variantName !== 'Default' && <span className="text-ink-3"> · {i.variantName}</span>}{!!i.backorderedQty && <span className="ml-2 inline-block rounded-full bg-info-bg px-2 py-0.5 text-[11px] font-semibold text-info">Pre-order: {i.backorderedQty} awaiting stock</span>}</td>
                   <td className="px-5 py-3 text-right tabular text-ink-2">{formatMoney(i.unitPriceMinor, o.currency)} × {i.quantity}{i.discountMinor !== '0' && <span className="text-ink-3"> − {formatMoney(i.discountMinor, o.currency)}</span>}</td>
                   <td className="px-5 py-3 text-right tabular">{formatMoney(i.lineTotalMinor, o.currency)}</td>
                 </tr>

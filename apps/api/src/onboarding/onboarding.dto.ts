@@ -1,8 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
-  IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, Length, Matches, MaxLength, Min, ValidateNested,
-} from 'class-validator';
+  IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, Length, Matches, MaxLength, Min, ValidateNested, IsBoolean } from 'class-validator';
 import { E164, E164_MSG, lower, trim } from '../auth/dto';
 
 const HANDLE = /^@?[A-Za-z0-9._]{1,60}$/;
@@ -32,6 +31,8 @@ export class UpdateStoreProfileDto {
   @ApiPropertyOptional() @IsOptional() @Transform(trim) @Matches(E164, { message: E164_MSG }) contactPhone?: string;
   @ApiPropertyOptional({ example: '+2348012345678' }) @IsOptional() @Transform(trim) @Matches(E164, { message: E164_MSG }) whatsappNumber?: string;
   @ApiPropertyOptional({ type: SocialLinksDto }) @IsOptional() @ValidateNested() @Type(() => SocialLinksDto) socialLinks?: SocialLinksDto;
+  @ApiPropertyOptional({ description: 'Sell beyond stock (pre-orders): orders hold what exists, the rest waits for restock and cannot be dispatched until filled' })
+  @IsOptional() @IsBoolean() allowPreorders?: boolean;
 }
 
 export class UploadRequestDto {

@@ -10,7 +10,7 @@ import { useTheme } from '@/lib/theme';
 interface Txn { id: string; provider: string; status: string; grossMinor: string; currency: string; transferEvidence: { payerName?: string; payerBank?: string; payerReference?: string } | null; createdAt: string }
 interface Order {
   id: string; reference: string; status: string; currency: string; subtotalMinor: string; deliveryFeeMinor: string; totalMinor: string; reservationExpiresAt: string | null; createdAt: string;
-  items: Array<{ id: string; productName: string; productCode: string | null; variantName: string; quantity: number; lineTotalMinor: string }>;
+  items: Array<{ id: string; productName: string; productCode: string | null; variantName: string; quantity: number; backorderedQty?: number; lineTotalMinor: string }>;
   customer: { fullName: string; phone: string | null } | null; shippingAddress: { line1: string; city: string; state: string } | null;
   transactions: Txn[]; nextStatuses: string[];
 }
@@ -53,7 +53,7 @@ export default function OrderScreen() {
         <Row><Text style={{ fontSize: 20, fontWeight: '700', color: c.ink }}>{o.reference}</Text><Badge tone={st.tone}>{st.label}</Badge></Row>
         <Muted>{when(o.createdAt)}{['PENDING_PAYMENT', 'PAYMENT_VERIFICATION'].includes(o.status) && o.reservationExpiresAt ? ` · ${holdLabel(o.reservationExpiresAt)}` : ''}</Muted>
         {o.items.map((i) => (
-          <Row key={i.id}><Text style={{ color: c.ink, flex: 1 }}>{i.quantity} × {i.productCode ? `${i.productCode} ` : ''}{i.productName}{i.variantName !== 'Default' ? ` (${i.variantName})` : ''}</Text><Text style={{ color: c.ink }}>{money(i.lineTotalMinor, o.currency)}</Text></Row>
+          <Row key={i.id}><Text style={{ color: c.ink, flex: 1 }}>{i.quantity} × {i.productCode ? `${i.productCode} ` : ''}{i.productName}{i.variantName !== 'Default' ? ` (${i.variantName})` : ''}{i.backorderedQty ? `\nPre-order: ${i.backorderedQty} awaiting stock` : ''}</Text><Text style={{ color: c.ink }}>{money(i.lineTotalMinor, o.currency)}</Text></Row>
         ))}
         {o.deliveryFeeMinor !== '0' ? <Row><Muted>Delivery</Muted><Muted>{money(o.deliveryFeeMinor, o.currency)}</Muted></Row> : null}
         <Row><Text style={{ fontWeight: '700', color: c.ink }}>Total</Text><Text style={{ fontWeight: '700', color: c.ink }}>{money(o.totalMinor, o.currency)}</Text></Row>

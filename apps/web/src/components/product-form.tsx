@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { koboToNairaInput, nairaToKobo } from '@/lib/money';
@@ -45,6 +45,8 @@ export function ProductForm({ product, onSaved }: { product?: Product; onSaved?:
   const [name, setName] = useState(product?.name ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
   const [code, setCode] = useState(product?.productCode ?? '');
+  // New products: the code follows the name ("Red Leather Handbag" → BAG007) until the seller types their own.
+  const [codeTouched, setCodeTouched] = useState(!!product);
   const [categoryId, setCategoryId] = useState(product?.category?.id ?? '');
   const [status, setStatus] = useState<ProductStatus>(product?.status ?? 'DRAFT');
   const [tags, setTags] = useState(product?.tags.join(', ') ?? '');
@@ -115,6 +117,15 @@ export function ProductForm({ product, onSaved }: { product?: Product; onSaved?:
   }
   const move = (i: number, d: -1 | 1) => setMedia((m) => { const n = [...m]; [n[i], n[i + d]] = [n[i + d], n[i]]; return n; });
 
+  useEffect(() => {
+    if (codeTouched || name.trim().length < 2) return;
+    const t = setTimeout(() => {
+      const qs = new URLSearchParams({ name: name.trim(), ...(categoryId ? { categoryId } : {}) });
+      api<{ productCode: string }>(`/products/code-suggestion?${qs}`).then((r) => setCode(r.productCode)).catch(() => undefined);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [name, categoryId, codeTouched]);
+
   async function suggest() {
     try {
       const qs = new URLSearchParams({ name: name || 'Item', ...(categoryId ? { categoryId } : {}) });
@@ -175,10 +186,10 @@ export function ProductForm({ product, onSaved }: { product?: Product; onSaved?:
           <CardHeader title="Details" action={storeLink && <Link href={storeLink} target="_blank" className="text-sm font-medium text-brand-700 hover:underline">View on storefront ↗</Link>} />
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Product name" className="sm:col-span-2" error={name && name.trim().length < 2 ? 'At least 2 characters' : null}>{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} placeholder="Premium Leather Bag" />}</Field>
-            <Field label="Product code" hint="Customers send this to order, e.g. BAG001. Leave empty to generate one." error={code && !/^[A-Z0-9][A-Z0-9-]{1,19}$/.test(code) ? '2–20 letters, digits or hyphens' : null}>
+            <Field label="Product code" hint="Filled in from the name (you can change it). Customers send this to order, e.g. BAG001." error={code && !/^[A-Z0-9][A-Z0-9-]{1,19}$/.test(code) ? '2–20 letters, digits or hyphens' : null}>
               {(p) => (
                 <div className="flex gap-2">
-                  <Input {...p} className="font-mono uppercase" value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/\s+/g, ''))} placeholder="Auto" />
+                  <Input {...p} className="font-mono uppercase" value={code} onChange={(e) => { setCodeTouched(true); setCode(e.target.value.toUpperCase().replace(/\s+/g, '')); }} placeholder="Auto" />
                   <Button type="button" variant="secondary" onClick={() => void suggest()}>Suggest</Button>
                 </div>
               )}

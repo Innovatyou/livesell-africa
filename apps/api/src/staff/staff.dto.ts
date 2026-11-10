@@ -3,7 +3,7 @@ import { Transform } from 'class-transformer';
 import { Equals, IsEmail, IsIn, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
 import { E164, E164_MSG, PASSWORD, PASSWORD_MSG, lower, trim } from '../auth/dto';
 
-export const INVITABLE_ROLES = ['STORE_MANAGER', 'SALES_ASSISTANT', 'LIVE_MODERATOR'] as const;
+export const INVITABLE_ROLES = ['STORE_MANAGER', 'SALES_ASSISTANT', 'LIVE_MODERATOR', 'DISPATCHER', 'ACCOUNTANT', 'CUSTOMER_CARE'] as const;
 export type InvitableRole = (typeof INVITABLE_ROLES)[number];
 
 export class CreateInvitationDto {

@@ -12,6 +12,9 @@ const ROLES: Array<[string, string, string]> = [
   ['STORE_MANAGER', 'Store manager', 'Products, orders, stock, customers and reports'],
   ['SALES_ASSISTANT', 'Sales assistant', 'Create orders and check availability'],
   ['LIVE_MODERATOR', 'Live moderator', 'Run live sessions and register orders'],
+  ['DISPATCHER', 'Dispatch & delivery', 'Pack and send orders, update deliveries and couriers (no payments)'],
+  ['ACCOUNTANT', 'Accounts', 'See payments, confirm bank transfers and read reports (no stock or staff)'],
+  ['CUSTOMER_CARE', 'Customer care', 'Answer customers, create orders and keep customer notes'],
 ];
 const roleName = (k: string) => (k === 'OWNER' ? 'Business owner' : ROLES.find(([r]) => r === k)?.[1] ?? k);
 const date = (s: string) => new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(s));

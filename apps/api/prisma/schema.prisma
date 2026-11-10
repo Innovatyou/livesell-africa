@@ -926,6 +926,8 @@ model OrderItem {
   variantName    String @map("variant_name")
   sku            String
   quantity       Int
+  /// Phase 14 pre-orders: units of `quantity` not yet held in stock (0..quantity). Filled oldest-first on restock.
+  backorderedQty Int @default(0) @map("backordered_qty")
   unitPriceMinor BigInt @map("unit_price_minor")
   discountMinor  BigInt @default(0) @map("discount_minor")
   lineTotalMinor BigInt @map("line_total_minor")
@@ -1258,6 +1260,8 @@ model StorefrontSettings {
   orderInstructions String? @map("order_instructions")
   /// Phase 10: { pickupEnabled, pickupAddress, pickupInstructions, deliverOutsideZones }. Zones live in delivery_zones.
   deliverySettings Json @default("{}") @map("delivery_settings")
+  /// Phase 14: sell beyond stock. Orders hold what exists; the rest waits as order_items.backordered_qty until restocked.
+  allowPreorders Boolean @default(false) @map("allow_preorders")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

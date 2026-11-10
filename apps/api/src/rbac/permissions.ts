@@ -33,7 +33,7 @@ export const PERMISSIONS = {
 export type PermissionKey = keyof typeof PERMISSIONS;
 const ALL = Object.keys(PERMISSIONS) as PermissionKey[];
 
-export type SystemRoleKey = 'OWNER' | 'STORE_MANAGER' | 'SALES_ASSISTANT' | 'LIVE_MODERATOR';
+export type SystemRoleKey = 'OWNER' | 'STORE_MANAGER' | 'SALES_ASSISTANT' | 'LIVE_MODERATOR' | 'DISPATCHER' | 'ACCOUNTANT' | 'CUSTOMER_CARE';
 
 export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: PermissionKey[] }> = {
   OWNER: { name: 'Business owner', permissions: ALL },
@@ -54,5 +54,18 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
   LIVE_MODERATOR: {
     name: 'Live moderator',
     permissions: ['products:read', 'inventory:read', 'orders:read', 'orders:create', 'customers:read', 'live:read', 'live:manage'],
+  },
+  // Phase 14: roles Nigerian stores commonly split out. None of them can touch staff, settings, refunds or exports.
+  DISPATCHER: {
+    name: 'Dispatch & delivery',
+    permissions: ['products:read', 'inventory:read', 'orders:read', 'orders:update_status', 'customers:read', 'delivery:manage'],
+  },
+  ACCOUNTANT: {
+    name: 'Accounts',
+    permissions: ['orders:read', 'payments:read', 'payments:verify_transfer', 'customers:read', 'reports:read'],
+  },
+  CUSTOMER_CARE: {
+    name: 'Customer care',
+    permissions: ['products:read', 'inventory:read', 'orders:read', 'orders:create', 'customers:read', 'customers:write', 'live:read'],
   },
 };

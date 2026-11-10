@@ -59,6 +59,10 @@ function Gate() {
       <Stack.Screen name="verification" options={{ title: 'Business verification' }} />
       <Stack.Screen name="orders/[id]" options={{ title: 'Order' }} />
       <Stack.Screen name="live/[id]" options={{ title: 'Live session' }} />
+      <Stack.Screen name="live/new" options={{ title: 'New live session' }} />
+      <Stack.Screen name="team" options={{ title: 'Team & roles' }} />
+      <Stack.Screen name="settings/payments" options={{ title: 'Payments' }} />
+      <Stack.Screen name="settings/messages" options={{ title: 'Customer messages' }} />
       <Stack.Screen name="appearance" options={{ title: 'Appearance' }} />
     </Stack>
     </NavThemeProvider>

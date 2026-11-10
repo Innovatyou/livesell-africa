@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Switch, Text } from 'react-native';
 import { Button, Card, ErrorBox, Field, Loading, Muted, Notice, Row, Screen, c } from '@/components/ui';
@@ -6,7 +7,7 @@ import { useApi, useAuth } from '@/lib/auth';
 import { e164, isE164 } from '@/lib/format';
 import { useTheme } from '@/lib/theme';
 
-interface Profile { businessName: string; storefront: { description: string | null; whatsappNumber: string | null; contactPhone: string | null } | null }
+interface Profile { businessName: string; storefront: { description: string | null; whatsappNumber: string | null; contactPhone: string | null; allowPreorders?: boolean } | null }
 interface Prefs { enabled: boolean }
 
 /** Store profile (what customers see) and whether LiveSell messages customers automatically. */
@@ -57,11 +58,18 @@ export default function StoreSettings() {
           await profile.reload();
         }, 'Store details saved.')} />
       </Card>
+      <Card style={{ gap: 6 }}>
+        <Row><Text style={{ color: c.ink, flex: 1, fontWeight: '600' }}>Sell beyond stock (pre-orders)</Text>
+          <Switch value={!!profile.data.storefront?.allowPreorders} disabled={busy === 'pre'} trackColor={{ true: c.brand, false: c.line }} thumbColor={c.surface} accessibilityLabel="Sell beyond stock"
+            onValueChange={(v) => void run('pre', async () => { await api('/store/profile', { method: 'PATCH', body: { allowPreorders: v } }); await profile.reload(); }, v ? 'Pre-orders on: you can keep selling when an item runs out.' : 'Pre-orders off: sold-out items can’t be ordered.')} /></Row>
+        <Muted>For when you can get more for the customer. Orders hold the stock you have; the rest shows as “awaiting stock”. Adding stock fills waiting orders oldest first, and an order can’t be dispatched until it’s all in. Your store shows “Pre-order” instead of “Sold out”.</Muted>
+      </Card>
       {prefs.data ? (
         <Card style={{ gap: 6 }}>
           <Row><Text style={{ color: c.ink, flex: 1 }}>Message customers automatically</Text>
             <Switch value={prefs.data.enabled} disabled={busy === 'prefs'} onValueChange={(v) => void run('prefs', async () => prefs.setData(await api<Prefs & Record<string, unknown>>('/notifications/preferences', { method: 'PUT', body: { ...prefs.data, enabled: v } })), v ? 'Automatic messages on.' : 'Automatic messages off.')} /></Row>
-          <Muted>Order, payment and delivery updates by WhatsApp, SMS and email. Choose per message on the web.</Muted>
+          <Muted>Order, payment and delivery updates by WhatsApp, SMS and email.</Muted>
+          <Button variant="secondary" title="Choose messages and channels" onPress={() => router.push('/settings/messages')} />
         </Card>
       ) : null}
     </Screen>

@@ -204,7 +204,7 @@ export class OrdersService {
           if (opts.delivery) {
             await tx.deliveryOrder.create({ data: { orderId: o.id, method: opts.delivery.method, zoneId: opts.delivery.zoneId, logisticsProvider: 'manual' } as Prisma.DeliveryOrderUncheckedCreateInput });
           }
-          if (confirm) await this.inventory.reserve(tx, tenantId, toStock(lines), o.id, opts.actorId);
+          if (confirm) await this.reserveForOrderTx(tx, tenantId, o.id, opts.actorId);
           return o;
         });
         await this.audit.record({ action: 'order.created', actorId: opts.actorId, tenantId, entityType: 'order', entityId: order.id, metadata: { reference: order.reference, source: opts.source, confirm, total: totals.totalMinor.toString() } });
@@ -246,12 +246,12 @@ export class OrdersService {
       if (dto.notes !== undefined) changes.push('notes');
 
       if (lines && o.status === 'PENDING_PAYMENT') {
-        await this.inventory.release(tx, t.tenantId, o.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })), o.id, actorId);
-        await this.inventory.reserve(tx, t.tenantId, toStock(lines), o.id, actorId);
+        await this.inventory.release(tx, t.tenantId, held(o.items), o.id, actorId, { allocate: false });
       }
       if (lines) {
         await tx.orderItem.deleteMany({ where: { orderId: o.id } });
         await tx.orderItem.createMany({ data: this.itemRows(t.tenantId, lines, totals.items).map((r) => ({ ...r, orderId: o.id })) as Prisma.OrderItemCreateManyInput[] });
+        if (o.status === 'PENDING_PAYMENT') await this.reserveForOrderTx(tx, t.tenantId, o.id, actorId);
       }
       await tx.order.update({
         where: { id: o.id },
@@ -289,10 +289,14 @@ export class OrdersService {
         ? 'This order is paid. Cancelling it needs a refund, which arrives with online payments.'
         : `An order that is ${label(o.status)} can't be moved to ${label(to)}`);
     }
-    const stock = o.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity }));
-    if (to === 'PENDING_PAYMENT') await this.inventory.reserve(tx, tenantId, stock, o.id, actorId);
-    if (to === 'CANCELLED' && HOLD_STATUSES.includes(o.status)) await this.inventory.release(tx, tenantId, stock, o.id, actorId);
+    const stock = held(o.items);
     const commit = commitsStock(to) && !o.stockCommittedAt;
+    const waiting = o.items.reduce((n, i) => n + i.backorderedQty, 0);
+    if (commit && waiting > 0) {
+      throw new ConflictException({ code: 'AWAITING_STOCK', message: `${waiting} item${waiting === 1 ? ' is' : 's are'} still awaiting stock. Add the stock to send this pre-order.` });
+    }
+    if (to === 'PENDING_PAYMENT') await this.reserveForOrderTx(tx, tenantId, o.id, actorId);
+    if (to === 'CANCELLED' && HOLD_STATUSES.includes(o.status)) await this.inventory.release(tx, tenantId, stock, o.id, actorId);
     if (commit) await this.inventory.commitSale(tx, tenantId, stock, o.id, actorId);
     await tx.order.update({
       where: { id: o.id },
@@ -412,7 +416,7 @@ export class OrdersService {
     }
     // Paid orders still hold their reservation until dispatch commits it as a sale.
     const release = r.fully && !o.stockCommittedAt && PAID_LIKE.includes(o.status);
-    if (release) await this.inventory.release(tx, tenantId, o.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })), o.id, r.actorId);
+    if (release) await this.inventory.release(tx, tenantId, held(o.items), o.id, r.actorId);
     await tx.order.update({ where: { id: o.id }, data: { status: to, paymentStatus: paymentStatusFor(to, o.paymentStatus) } });
     await this.history(tx, o.id, o.status, to, r.actorId, 'system', r.note);
     return { status: to, released: release };
@@ -429,7 +433,7 @@ export class OrdersService {
         const done = await this.prisma.tenantTransaction(tenantId, async (tx) => {
           const o = await this.lockOrder(tx, tenantId, id);
           if (!HOLD_STATUSES.includes(o.status) || !o.reservationExpiresAt || o.reservationExpiresAt > now) return false;
-          await this.inventory.release(tx, tenantId, o.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })), o.id, null);
+          await this.inventory.release(tx, tenantId, held(o.items), o.id, null);
           await tx.order.update({ where: { id }, data: { status: 'CANCELLED', paymentStatus: paymentStatusFor('CANCELLED', o.paymentStatus), reservationExpiresAt: null } });
           await this.history(tx, id, o.status, 'CANCELLED', null, 'system', 'Payment was not received before the stock hold expired');
           return true;
@@ -469,6 +473,24 @@ export class OrdersService {
   }
 
   /** Locks the order row for the rest of the transaction and returns it with items. */
+  /**
+   * Holds stock for every line of the order. Stores that sell pre-orders hold what exists and record the rest per
+   * line as backordered (filled oldest-first on restock); other stores get the all-or-nothing INSUFFICIENT_STOCK.
+   */
+  private async reserveForOrderTx(tx: Tx, tenantId: string, orderId: string, actorId: string | null) {
+    const items = await tx.orderItem.findMany({ where: { orderId }, orderBy: { position: 'asc' }, select: { id: true, variantId: true, quantity: true } });
+    const settings = await tx.storefrontSettings.findFirst({ where: { tenantId }, select: { allowPreorders: true } });
+    const shortfall = await this.inventory.reserve(tx, tenantId, items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })), orderId, actorId, { allowShortfall: !!settings?.allowPreorders });
+    // Spread each variant's shortfall over its lines, last line first.
+    for (const i of [...items].reverse()) {
+      const missing = shortfall.get(i.variantId) ?? 0;
+      if (missing <= 0) continue;
+      const qty = Math.min(missing, i.quantity);
+      await tx.orderItem.update({ where: { id: i.id }, data: { backorderedQty: qty } });
+      shortfall.set(i.variantId, missing - qty);
+    }
+  }
+
   private async lockOrder(tx: Tx, tenantId: string, id: string) {
     const rows = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM orders WHERE id = ${id}::uuid AND tenant_id = ${tenantId}::uuid FOR UPDATE`;
     if (!rows.length) throw new NotFoundException('Order not found');
@@ -622,4 +644,9 @@ function toStock(lines: ResolvedLine[]): StockLine[] {
 
 function label(s: OrderStatus) {
   return s.toLowerCase().replace(/_/g, ' ');
+}
+
+/** Units an order actually holds in stock: pre-order units still awaiting stock aren't reserved. */
+function held(items: Array<{ variantId: string; quantity: number; backorderedQty: number }>) {
+  return items.map((i) => ({ variantId: i.variantId, quantity: i.quantity - i.backorderedQty })).filter((l) => l.quantity > 0);
 }

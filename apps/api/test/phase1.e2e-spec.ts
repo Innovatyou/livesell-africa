@@ -46,7 +46,7 @@ describe('Phase 1 — auth, multi-tenancy, RBAC, integrity', () => {
 
   // ── Registration ──
   describe('registration', () => {
-    it('creates user, workspace, 4 system roles, owner membership, channels and a trial', async () => {
+    it('creates user, workspace, the system roles, owner membership, channels and a trial', async () => {
       const { res, tenantId } = await register();
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.refreshToken).toBeUndefined(); // web: cookie only
@@ -54,7 +54,7 @@ describe('Phase 1 — auth, multi-tenancy, RBAC, integrity', () => {
       expect(cookie).toMatch(/HttpOnly/); expect(cookie).toMatch(/SameSite=Strict/); expect(cookie).toMatch(/Path=\/api\/v1\/auth/);
 
       const roles = await prisma.role.findMany({ where: { tenantId }, select: { key: true } });
-      expect(roles.map((r) => r.key).sort()).toEqual(['LIVE_MODERATOR', 'OWNER', 'SALES_ASSISTANT', 'STORE_MANAGER']);
+      expect(roles.map((r) => r.key).sort()).toEqual(['ACCOUNTANT', 'CUSTOMER_CARE', 'DISPATCHER', 'LIVE_MODERATOR', 'OWNER', 'SALES_ASSISTANT', 'STORE_MANAGER']);
       expect(await prisma.salesChannel.count({ where: { tenantId } })).toBe(2);
       const sub = await prisma.subscription.findFirstOrThrow({ where: { tenantId }, include: { plan: true } });
       expect(sub.status).toBe('TRIALING');

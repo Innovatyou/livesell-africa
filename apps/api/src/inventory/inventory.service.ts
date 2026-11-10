@@ -46,7 +46,8 @@ export class InventoryService {
       }
       const type: InventoryMovementType = input.type ?? (input.mode === 'add' ? 'RESTOCK' : 'ADJUSTMENT');
       await this.apply(tx, row, { onHand, reserved: row.reserved }, type, delta, input.reason, actorId, null);
-      return { onHand, reserved: row.reserved, delta };
+      if (delta > 0) await this.allocateBackordersTx(tx, [row], actorId);
+      return { onHand: row.on_hand, reserved: row.reserved, delta };
     });
     if (result.delta !== 0) {
       await this.audit.record({
@@ -62,6 +63,7 @@ export class InventoryService {
     const [row] = await this.lock(tx, tenantId, [variantId]);
     if (!row) throw new NotFoundException('Variant not found');
     await this.apply(tx, row, { onHand: row.on_hand + quantity, reserved: row.reserved }, 'RESTOCK', quantity, reason, actorId, null);
+    await this.allocateBackordersTx(tx, [row], actorId);
   }
 
   /** Stock count inside the caller's transaction (CSV import): sets on hand, never below what is reserved. */
@@ -70,11 +72,17 @@ export class InventoryService {
     if (!row) throw new NotFoundException('Variant not found');
     if (onHand === row.on_hand) return;
     if (onHand < row.reserved) throw new ConflictException(`Stock for this variant can't go below ${row.reserved} (reserved for open orders)`);
+    const grew = onHand > row.on_hand;
     await this.apply(tx, row, { onHand, reserved: row.reserved }, 'ADJUSTMENT', onHand - row.on_hand, reason, actorId, null);
+    if (grew) await this.allocateBackordersTx(tx, [row], actorId);
   }
 
-  /** All-or-nothing reservation for an order. Rows are locked in a fixed order to avoid deadlocks. */
-  async reserve(tx: Tx, tenantId: string, lines: StockLine[], orderId: string | null, actorId: string | null) {
+  /**
+   * Reservation for an order. Rows are locked in a fixed order to avoid deadlocks.
+   * Default: all-or-nothing (throws InsufficientStockError). With `allowShortfall` (the store sells pre-orders) it holds
+   * what exists and returns the units still missing per variant, which the caller records as order_items.backordered_qty.
+   */
+  async reserve(tx: Tx, tenantId: string, lines: StockLine[], orderId: string | null, actorId: string | null, opts: { allowShortfall?: boolean } = {}) {
     const merged = mergeLines(lines);
     const rows = await this.lock(tx, tenantId, [...merged.keys()]);
     const byVariant = new Map(rows.map((r) => [r.variant_id, r]));
@@ -84,20 +92,52 @@ export class InventoryService {
       const available = r ? r.on_hand - r.reserved : 0;
       if (!r || available < quantity) shortages.push({ variantId, requested: quantity, available: Math.max(0, available) });
     }
-    if (shortages.length) throw new InsufficientStockError(shortages);
+    if (shortages.length && !opts.allowShortfall) throw new InsufficientStockError(shortages);
+    if (shortages.some((s) => !byVariant.has(s.variantId))) throw new InsufficientStockError(shortages); // no stock record at all
+    const shortfall = new Map<string, number>();
     for (const [variantId, quantity] of merged) {
       const r = byVariant.get(variantId)!;
-      await this.apply(tx, r, { onHand: r.on_hand, reserved: r.reserved + quantity }, 'RESERVATION', quantity, null, actorId, orderId);
+      const take = Math.min(quantity, Math.max(0, r.on_hand - r.reserved));
+      if (take < quantity) shortfall.set(variantId, quantity - take);
+      if (take > 0) await this.apply(tx, r, { onHand: r.on_hand, reserved: r.reserved + take }, 'RESERVATION', take, null, actorId, orderId);
     }
+    return shortfall;
   }
 
-  /** Returns reserved units to available stock (cancelled / expired order). Never releases more than is reserved. */
-  async release(tx: Tx, tenantId: string, lines: StockLine[], orderId: string | null, actorId: string | null) {
+  /**
+   * Returns reserved units to available stock (cancelled / expired / edited order). Never releases more than is
+   * reserved. Pass only what the order actually holds (quantity − backordered). Freed units then go to waiting
+   * pre-orders (oldest first), unless `allocate: false` (an edit that re-reserves for the same order straight away).
+   */
+  async release(tx: Tx, tenantId: string, lines: StockLine[], orderId: string | null, actorId: string | null, opts: { allocate?: boolean } = {}) {
     const merged = mergeLines(lines);
     const rows = await this.lock(tx, tenantId, [...merged.keys()]);
     for (const r of rows) {
       const qty = Math.min(merged.get(r.variant_id) ?? 0, r.reserved);
       if (qty > 0) await this.apply(tx, r, { onHand: r.on_hand, reserved: r.reserved - qty }, 'RELEASE', -qty, null, actorId, orderId);
+    }
+    if (opts.allocate !== false) await this.allocateBackordersTx(tx, rows, actorId, orderId);
+  }
+
+  /**
+   * Pre-orders waiting for stock get it oldest order first, as soon as units are available (restock, cancellation).
+   * `rows` must already be locked by the caller. Never touches the order being released (`exceptOrderId`).
+   */
+  private async allocateBackordersTx(tx: Tx, rows: Locked[], actorId: string | null, exceptOrderId: string | null = null) {
+    for (const r of rows) {
+      if (r.on_hand - r.reserved <= 0) continue;
+      const waiting = await tx.$queryRaw<Array<{ id: string; order_id: string; backordered_qty: number }>>`
+        SELECT oi.id, oi.order_id, oi.backordered_qty FROM order_items oi JOIN orders o ON o.id = oi.order_id
+        WHERE oi.variant_id = ${r.variant_id}::uuid AND oi.backordered_qty > 0
+          AND o.status IN ('PENDING_PAYMENT', 'PAYMENT_VERIFICATION', 'PAID', 'PROCESSING', 'READY_FOR_DISPATCH')
+          AND (${exceptOrderId}::uuid IS NULL OR o.id <> ${exceptOrderId}::uuid)
+        ORDER BY o.created_at, oi.position FOR UPDATE OF oi`;
+      for (const w of waiting) {
+        const take = Math.min(w.backordered_qty, r.on_hand - r.reserved);
+        if (take <= 0) break;
+        await this.apply(tx, r, { onHand: r.on_hand, reserved: r.reserved + take }, 'RESERVATION', take, 'Pre-order filled from new stock', actorId, w.order_id);
+        await tx.orderItem.update({ where: { id: w.id }, data: { backorderedQty: { decrement: take } } });
+      }
     }
   }
 

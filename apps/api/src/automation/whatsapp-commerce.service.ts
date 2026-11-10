@@ -228,6 +228,8 @@ export class WhatsappCommerceService {
       id: v.id, label: v.name === 'Default' ? p.name : v.name, priceMinor: (v.promoPriceMinor ?? v.priceMinor).toString(),
       available: Math.max(0, (v.inventory?.onHand ?? 0) - (v.inventory?.reserved ?? 0)),
     }));
+    // Stores selling pre-orders take orders beyond stock (the order waits for restock before dispatch).
+    if (await this.preordersOn(tenantId)) for (const v of variants) v.available = Math.max(v.available, MAX_QTY);
     if (variants.every((v) => v.available <= 0)) {
       await this.save(conv, 'IDLE', { lastOrderId: draft.lastOrderId }, tenantId);
       return this.reply(conv, `Sorry, ${p.name} is sold out at ${store.businessName} right now.`);
@@ -253,11 +255,16 @@ export class WhatsappCommerceService {
     return this.reply(conv, `${draft.productName} — ${v.label}. How many would you like? (1–${Math.min(MAX_QTY, v.available)})`);
   }
 
+  private async preordersOn(tenantId: string) {
+    return !!(await this.prisma.forTenant(tenantId).storefrontSettings.findFirst({ select: { allowPreorders: true } }))?.allowPreorders;
+  }
+
   private async pickQuantity(conv: WhatsappConversation, draft: Draft, text: string) {
     const q = Number(text.trim());
     if (!Number.isInteger(q) || q < 1 || q > MAX_QTY) return this.reply(conv, `Reply with a quantity from 1 to ${MAX_QTY}.`);
     const v = await this.prisma.forTenant(conv.tenantId!).productVariant.findUnique({ where: { id: draft.variantId! }, include: { inventory: { select: { onHand: true, reserved: true } } } });
-    const available = Math.max(0, (v?.inventory?.onHand ?? 0) - (v?.inventory?.reserved ?? 0));
+    const inStock = Math.max(0, (v?.inventory?.onHand ?? 0) - (v?.inventory?.reserved ?? 0));
+    const available = (await this.preordersOn(conv.tenantId!)) ? Math.max(inStock, MAX_QTY) : inStock;
     if (available < q) return this.reply(conv, available > 0 ? `Only ${available} left. Reply with a quantity up to ${available}.` : 'Sorry, that just sold out. Send another product code, or CANCEL.');
     const existing = await this.prisma.forTenant(conv.tenantId!).customer.findFirst({
       where: { phone: conv.phone, anonymizedAt: null }, include: { addresses: { orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }], take: 1 } },

@@ -16,6 +16,18 @@ describe('catalogue utils', () => {
     expect(codePrefix("Men's Sneakers")).toBe('SNEAK');
     expect(codePrefix('Ankara dress', 'Dresses & Gowns')).toBe('DRESS');
     expect(codePrefix('123')).toBe('ITEM');
+    // Phase 14: the head noun, not the last word; familiar codes for common items.
+    expect(codePrefix('Red Leather Handbag')).toBe('BAG');
+    expect(codePrefix('Ladies Block Heels Size 39')).toBe('HEEL');
+    expect(codePrefix('Set of 3 Wigs')).toBe('WIG');
+    expect(codePrefix('Bone Straight Human Hair Wig 22 inches')).toBe('WIG');
+    expect(codePrefix('Ankara Maxi Gown with Belt')).toBe('GOWN');
+    expect(codePrefix('Vitamin C Face Serum 30ml')).toBe('SERUM');
+    expect(codePrefix('Oud Perfume for Men')).toBe('PERF');
+    expect(codePrefix('Wireless Earbuds Black')).toBe('BUDS');
+    expect(codePrefix('Classic Red', 'Shoes')).toBe('SHOE');
+    expect(codePrefix('Zobo Drink Pack')).toBe('DRINK');
+    expect(codePrefix('Chin Chin')).toBe('CHIN');
     expect(nextProductCode('BAG', [])).toBe('BAG001');
     expect(nextProductCode('SHOE', ['BAG001'])).toBe('SHOE002');
     expect(nextProductCode('DRESS', ['BAG001', 'SHOE002', 'WIG-X'])).toBe('DRESS003');

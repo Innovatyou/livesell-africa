@@ -84,6 +84,11 @@ export default function StoreSettingsPage() {
         </div>
       </Card>
 
+      <PreordersCard
+        on={!!profile.data.storefront.allowPreorders} canEdit={canEdit}
+        onChange={(v) => profile.setData({ ...profile.data!, storefront: { ...profile.data!.storefront, allowPreorders: v } })}
+      />
+
       <form onSubmit={save} noValidate>
         <fieldset disabled={!canEdit || busy} className="space-y-6">
           <Card>
@@ -131,5 +136,36 @@ export default function StoreSettingsPage() {
         )}
       </form>
     </div>
+  );
+}
+
+/** Sell beyond stock: orders hold what exists, the rest waits for restock (filled oldest-first) and can't ship until then. */
+function PreordersCard({ on, canEdit, onChange }: { on: boolean; canEdit: boolean; onChange: (v: boolean) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function toggle(v: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      await api('/store/profile', { method: 'PATCH', body: { allowPreorders: v } });
+      onChange(v);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Card className="mb-6">
+      <CardHeader title="Sell beyond stock (pre-orders)" description="Keep taking orders when an item runs out, if you can get more for the customer." />
+      <div className="space-y-3 p-5 text-sm">
+        <label className="flex items-center gap-3">
+          <input type="checkbox" className="size-4 accent-[var(--color-brand-600)]" checked={on} disabled={!canEdit || busy} onChange={(e) => void toggle(e.target.checked)} />
+          <span className="font-medium">Allow pre-orders when stock runs out</span>
+        </label>
+        <p className="text-ink-3">Orders hold the stock you have; the rest is marked <em>awaiting stock</em>. When you add stock, waiting orders are filled oldest first. An order can&apos;t be dispatched until all of it is in stock. Your store shows &ldquo;Pre-order&rdquo; instead of &ldquo;Sold out&rdquo;.</p>
+        {error && <Alert tone="bad">{error}</Alert>}
+      </div>
+    </Card>
   );
 }

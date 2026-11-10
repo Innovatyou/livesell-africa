@@ -11,6 +11,9 @@ import { useTheme } from '@/lib/theme';
 const LINKS = [
   { label: 'Store settings', href: '/settings/store', permission: 'store:manage' },
   { label: 'Business verification (CAC)', href: '/verification', permission: 'store:manage' },
+  { label: 'Team & roles', href: '/team', permission: 'staff:manage' },
+  { label: 'Payments & bank accounts', href: '/settings/payments', permission: 'payments:read' },
+  { label: 'Customer messages', href: '/settings/messages', permission: 'store:manage' },
   { label: 'Delivery & couriers', href: '/settings/delivery', permission: 'orders:read' },
   { label: 'Analytics', href: '/analytics', permission: 'reports:read' },
   { label: 'Plan & billing', href: '/billing', permission: 'billing:manage' },
@@ -85,7 +88,7 @@ export default function More() {
         ))}
       </Card>
       <Card style={{ gap: 8 }}>
-        <Muted>Payment gateways, team and advanced settings are on the web app.</Muted>
+        <Muted>Everything is in this app. The web app is there if you prefer a bigger screen (CSV import, printing invoices).</Muted>
         <Button variant="secondary" title="Open LiveSell on the web" onPress={() => void Linking.openURL(webUrl)} />
       </Card>
       <Button variant="danger" title="Sign out" loading={busy === 'logout'} onPress={() => void act('logout', logout)} />

@@ -114,6 +114,7 @@ export interface StoreProfile {
     whatsappNumber: string | null;
     socialLinks: Record<string, string>;
     isPublished: boolean;
+    allowPreorders?: boolean;
     logoUrl: string | null;
   };
 }
@@ -198,7 +199,8 @@ export interface StorefrontSettings {
   coverUrl: string | null; readiness: Array<{ key: string; label: string; done: boolean }>;
 }
 
-export type Availability = 'in_stock' | 'low_stock' | 'out_of_stock';
+/** `preorder`: none in stock, but the store takes pre-orders (sent once restocked). */
+export type Availability = 'in_stock' | 'low_stock' | 'out_of_stock' | 'preorder';
 export interface PublicStore {
   slug: string; businessName: string; verified: boolean; city: string | null; state: string | null; currency: string; description: string | null;
   orderInstructions: string | null; whatsappNumber: string | null; contactPhone: string | null; contactEmail: string | null;
@@ -223,7 +225,7 @@ export interface OrderListItem {
   channel: { type: string; name: string } | null; liveSession: { id: string; title: string } | null; _count: { items: number };
 }
 
-export interface OrderItem { id: string; variantId: string; productName: string; productCode: string | null; variantName: string; sku: string; quantity: number; unitPriceMinor: string; discountMinor: string; lineTotalMinor: string; position: number }
+export interface OrderItem { id: string; variantId: string; productName: string; productCode: string | null; variantName: string; sku: string; quantity: number; backorderedQty?: number; unitPriceMinor: string; discountMinor: string; lineTotalMinor: string; position: number }
 export interface ShippingAddress { fullName?: string | null; phone?: string | null; line1: string; line2?: string | null; city: string; state: string; landmark?: string | null; country?: string }
 
 export interface Order {
