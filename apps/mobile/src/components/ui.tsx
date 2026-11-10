@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, Text, TextInput, View, useWindowDimensions,
@@ -33,8 +34,9 @@ export function Screen({ children, refreshing, onRefresh }: { children: React.Re
   useTheme();
   const { width } = useWindowDimensions();
   const pad = width > 720 ? (width - 680) / 2 : 16;
+  const insets = useSafeAreaInsets(); // keep the last button clear of Android's navigation bar (edge-to-edge)
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: c.canvas }} contentContainerStyle={{ paddingHorizontal: pad, paddingVertical: 16, gap: 12 }} keyboardShouldPersistTaps="handled"
+    <ScrollView style={{ flex: 1, backgroundColor: c.canvas }} contentContainerStyle={{ paddingHorizontal: pad, paddingTop: 16, paddingBottom: 24 + insets.bottom, gap: 12 }} keyboardShouldPersistTaps="handled"
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={c.brand} colors={[c.brand]} progressBackgroundColor={c.surface} /> : undefined}>
       {children}
     </ScrollView>
