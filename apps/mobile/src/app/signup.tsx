@@ -3,9 +3,10 @@ import { Linking, Pressable, Switch, Text, View } from 'react-native';
 import { Button, Card, Field, Muted, Notice, Screen, c } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { e164, isE164 } from '@/lib/format';
+import { WEB_HOST, WEB_URL } from '@/lib/links';
 import { useTheme } from '@/lib/theme';
 
-const WEB = 'https://app.livesell.africa';
+const WEB = WEB_URL;
 const CATEGORIES = ['Fashion', 'Beauty', 'Electronics', 'Food', 'Home', 'Other'];
 
 /** Create a store from the phone — the same fields and rules as the web sign-up (the API validates everything). */
@@ -46,7 +47,7 @@ export default function Signup() {
         <Field label="Business name" value={f.businessName} onChangeText={set('businessName')} />
         <Field label="Store link name" value={f.storeUsername} onChangeText={(v) => set('storeUsername')(v.toLowerCase())} autoCapitalize="none" placeholder="ada-fashion"
           error={f.storeUsername && !slugOk ? '3–40 lowercase letters, numbers or hyphens' : null} />
-        <Muted>{f.storeUsername ? `livesell.africa/store/${f.storeUsername}` : 'Your store page address'}</Muted>
+        <Muted>{f.storeUsername ? `${WEB_HOST}/store/${f.storeUsername}` : 'Your store page address'}</Muted>
         <Text style={{ fontWeight: '600', color: c.ink2 }}>Category</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {CATEGORIES.map((k) => (

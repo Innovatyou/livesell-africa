@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Linking, Switch, Text, View } from 'react-native';
 import { Avatar, Badge, Button, Card, Hero, ListRow, Muted, Notice, Screen, SectionTitle, c, type IconName } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { WEB_URL } from '@/lib/links';
 import * as bio from '@/lib/biometric';
 import { disablePush, enablePush, pushState, type PushState } from '@/lib/push';
 import { useTheme } from '@/lib/theme';
@@ -42,7 +43,7 @@ export default function More() {
   useEffect(() => { void pushState().then(setPush); }, []);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const webUrl = (Constants.expoConfig?.extra?.webUrl as string | undefined) ?? 'https://app.livesell.africa';
+  const webUrl = WEB_URL;
 
   async function act(key: string, fn: () => Promise<void>) {
     setBusy(key);

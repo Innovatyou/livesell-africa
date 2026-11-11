@@ -60,7 +60,7 @@ Read this file, `docs/MASTER-SPEC.md`, `docs/ARCHITECTURE.md` and `docs/PHASE-1.
   sales enquiries); API `src/admin/` (SUPPORT reads, ADMIN writes, all audited). API unit 123/123, e2e 205/205, web 29/29.
 - Phase 11 signed off. Phase 12 BUILT, awaiting sign-off (see `docs/PHASE-12.md`, `docs/DEPLOYMENT.md`): security review (§23), prod config
   guard (`src/config/production-checks.ts`), JSON logs + X-Request-Id + `ErrorReportingFilter`/`ALERT_WEBHOOK_URL`, web Dockerfile,
-  `docker-compose.prod.yml` + migrate job, `infra/nginx/prod.conf` (TLS), backup/restore scripts (drilled), CI workflow, k6 script,
+  `docker-compose.prod.yml` + migrate job, `infra/nginx/templates/default.conf.template` (TLS; domains from env), backup/restore scripts (drilled), CI workflow, k6 script,
   multer override (audit clean). API unit 127/127, e2e 211/211, web 29/29.
 - Phase 12 signed off. Mobile phase BUILT, awaiting sign-off (see `docs/PHASE-13-MOBILE.md`): `apps/mobile` Expo SDK 58 (expo pinned 58.0.19),
   Expo Router, outside npm workspaces (own lockfile); mobile sessions (`X-Client-Type: mobile`, refresh token in SecureStore, access

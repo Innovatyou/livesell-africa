@@ -7,7 +7,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.staging.livesell.africa"
+        "EXPO_PUBLIC_API_URL": "https://api.sell.innovative.ng",
+        "EXPO_PUBLIC_WEB_URL": "https://sell.innovative.ng"
       }
     },
     "local": {
@@ -17,13 +18,15 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "http://localhost:4000",
-        "ALLOW_CLEARTEXT": "1"
+        "ALLOW_CLEARTEXT": "1",
+        "EXPO_PUBLIC_WEB_URL": "http://localhost:3000"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.sell.innovative.ng"
+        "EXPO_PUBLIC_API_URL": "https://api.sell.innovative.ng",
+        "EXPO_PUBLIC_WEB_URL": "https://sell.innovative.ng"
       },
       "android": {
         "buildType": "apk"
@@ -32,7 +35,8 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.livesell.africa"
+        "EXPO_PUBLIC_API_URL": "https://api.sell.innovative.ng",
+        "EXPO_PUBLIC_WEB_URL": "https://sell.innovative.ng"
       }
     }
   },

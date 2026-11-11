@@ -69,9 +69,9 @@ All of it is linked to the account, used for app functionality, and not used for
 
 **Not collected:** location, contacts or payment card details. Card payments happen on the payment provider's page.
 
-**Privacy policy URL:** https://app.livesell.africa/privacy
+**Privacy policy URL:** https://sell.innovative.ng/privacy
 
-**Support URL:** https://app.livesell.africa (Contact).
+**Support URL:** https://sell.innovative.ng (Contact).
 
 **Account deletion:** in-app link to support plus the NDPA request process (Play requires a deletion URL).
 

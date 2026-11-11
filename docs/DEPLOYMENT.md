@@ -1,5 +1,33 @@
 # Deploying LiveSell Africa
 
+## Quick start: one VPS (Hostinger KVM 2 or similar, Ubuntu 24.04)
+
+1. **DNS:** point two A records at the server's IP: `sell.innovative.ng` and `api.sell.innovative.ng`.
+2. **Set up the server.** As root, run:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/Innovatyou/livesell-africa/main/scripts/server-setup.sh -o setup.sh && bash setup.sh
+   ```
+   It asks for:
+   - your domains;
+   - staging or production;
+   - your S3 bucket and keys;
+   - an email for the certificate.
+
+   Then it:
+   - installs Docker and enables the firewall (22/80/443) and swap;
+   - generates every secret into root-only files (`.env.deploy`, `apps/api/.env.production`);
+   - gets a Let's Encrypt certificate (renewed automatically);
+   - builds, migrates and seeds, then starts Postgres, Redis, the API, the web app and Nginx;
+   - schedules a daily database backup.
+3. **First admin:** register on the web, then run the `UPDATE users …` command the script prints.
+4. **Every release:**
+   ```bash
+   bash /srv/livesell/scripts/release.sh
+   ```
+   It pulls, builds, backs up, migrates, restarts, health-checks, and prints a rollback command if anything fails.
+
+The rest of this guide covers managed Postgres/Redis, monitoring and the go-live checklist.
+
 ## Environments
 
 Use three environments, each with its own database, Redis, bucket, keys and domains:
@@ -35,7 +63,7 @@ Use three environments, each with its own database, Redis, bucket, keys and doma
 ## First deployment
 
 1. **DNS:** point `app.` and `api.` to the server.
-2. **TLS:** get certificates (for example `certbot certonly --webroot -w infra/nginx/acme -d app.… -d api.…`). Put `fullchain.pem` and `privkey.pem` in `infra/tls/`, and set the `server_name` values in `infra/nginx/prod.conf`.
+2. **TLS:** get certificates (for example `certbot certonly --webroot -w infra/nginx/acme -d app.… -d api.…`). Put `fullchain.pem` and `privkey.pem` in `infra/tls/`. The server names come from `APP_DOMAIN` / `API_DOMAIN` in `.env.deploy` (`infra/nginx/templates/default.conf.template`).
 3. **API environment:** fill in `apps/api/.env.production` from `.env.example`.
 4. **Build:**
    ```bash
