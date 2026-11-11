@@ -166,7 +166,7 @@ Also check the reconciliation issues in the payments admin.
 
 ## Go-live checklist
 
-- [ ] The code is in version control (git), and CI (`.github/workflows/ci.yml`) is green on the release commit.
+- [x] The code is in version control (GitHub), and CI (`.github/workflows/ci.yml`) is green: API unit + e2e, web, mobile and both Docker images (first green run 2026-11-11). Keep it green on every release commit.
 - [ ] Every key used in development has been rotated, and the live payment keys are set.
 - [ ] Payment webhook URLs are registered and `*_WEBHOOKS_ENABLED=true`. Signature verification was tested with each provider's "send test webhook".
 - [ ] One real live payment of a small amount (each provider) is verified, refunded, and reconciled.

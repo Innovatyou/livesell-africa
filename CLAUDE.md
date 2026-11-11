@@ -75,6 +75,9 @@ Read this file, `docs/MASTER-SPEC.md`, `docs/ARCHITECTURE.md` and `docs/PHASE-1.
   `order_items.backordered_qty`, oldest-first fill on restock, dispatch blocked with 409 AWAITING_STOCK); smart product codes (`codePrefix` head noun);
   roles DISPATCHER / ACCOUNTANT / CUSTOMER_CARE (backfilled at boot). Kwik assessed, blocked on Kwik API access + geocoding. API unit 129/129,
   e2e 221/221, mobile jest 14/14, web 31/31.
+- Production prep (2026-11-11): CI green end to end (MinIO via `bitnamilegacy/minio:2025.7.23`; official images withdrawn), API image fixed
+  (prune from root, OpenSSL, non-hoisted modules), nginx domains from env (`infra/nginx/templates`), `scripts/server-setup.sh` + `scripts/release.sh`
+  for a single VPS, mobile builds point at api.sell.innovative.ng (`EXPO_PUBLIC_WEB_URL` for web links).
 - Pre-order units are never reserved: release/commit only `quantity - backorderedQty` (`held()` in orders.service); never ship while backordered.
 - Commission invoices are debts for past sales: never void them in plan changes or expiry, and paying one never changes the plan.
 - Delivery fees for customer orders are computed server-side only; never accept a fee from the storefront or WhatsApp client.
