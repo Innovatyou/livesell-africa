@@ -18,7 +18,7 @@ jobs:
         image: redis:7-alpine
         ports: ["6379:6379"]
       minio:
-        image: bitnami/minio:2025
+        image: bitnamilegacy/minio:2025.7.23  # official/bitnami MinIO images were withdrawn from Docker Hub
         env: { MINIO_ROOT_USER: livesell, MINIO_ROOT_PASSWORD: livesell-minio-dev, MINIO_DEFAULT_BUCKETS: livesell-media-test }
         ports: ["9000:9000"]
     env:
