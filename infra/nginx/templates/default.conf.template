@@ -1,6 +1,7 @@
-# Production reverse proxy: TLS, security headers, rate limits. Two hosts:
-#   app.livesell.africa  → web (Next.js)       api.livesell.africa → API (NestJS)
-# Replace the server_name values with your domains. Certificates: /etc/nginx/tls/{fullchain,privkey}.pem.
+# Production reverse proxy: TLS, security headers, rate limits. Two hosts, set in .env.deploy:
+#   ${APP_DOMAIN} → web (Next.js)       ${API_DOMAIN} → API (NestJS)
+# The nginx image fills these in at start (envsubst on /etc/nginx/templates; nginx's own $variables are untouched).
+# Certificates: /etc/nginx/tls/{fullchain,privkey}.pem (one certificate covering both names; scripts/server-setup.sh).
 limit_req_zone $binary_remote_addr zone=auth:10m rate=10r/m;
 limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
 limit_req_status 429;
@@ -22,7 +23,7 @@ map $http_x_request_id $req_id { default $http_x_request_id; "" $request_id; }
 server {
   listen 443 ssl;
   http2 on;
-  server_name api.livesell.africa;
+  server_name ${API_DOMAIN};
   server_tokens off;
   ssl_certificate /etc/nginx/tls/fullchain.pem;
   ssl_certificate_key /etc/nginx/tls/privkey.pem;
@@ -58,7 +59,7 @@ server {
 server {
   listen 443 ssl;
   http2 on;
-  server_name app.livesell.africa;
+  server_name ${APP_DOMAIN};
   server_tokens off;
   ssl_certificate /etc/nginx/tls/fullchain.pem;
   ssl_certificate_key /etc/nginx/tls/privkey.pem;

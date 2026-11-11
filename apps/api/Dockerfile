@@ -8,7 +8,8 @@ RUN npm ci -w apps/api --include-workspace-root
 FROM deps AS build
 WORKDIR /app/apps/api
 COPY apps/api/ ./
-RUN npx prisma generate && npx nest build && npm prune --omit=dev -w apps/api
+# prisma.config.ts requires DATABASE_URL; generate never connects, so a build-only placeholder is enough.
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npx prisma generate && npx nest build && npm prune --omit=dev -w apps/api
 
 # One-off job: apply migrations and the idempotent platform seed (plans, permissions, settings), then exit.
 #   docker compose -f docker-compose.prod.yml run --rm migrate
@@ -17,7 +18,7 @@ WORKDIR /app/apps/api
 COPY apps/api/prisma ./prisma
 COPY apps/api/prisma.config.ts apps/api/tsconfig.json apps/api/package.json ./
 COPY apps/api/src/rbac ./src/rbac
-RUN npx prisma generate
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npx prisma generate
 CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node prisma/seed.ts"]
 
 FROM node:22-bookworm-slim AS runtime

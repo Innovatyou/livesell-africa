@@ -23,6 +23,7 @@ jobs:
         ports: ["9000:9000"]
     env:
       TEST_DATABASE_URL: postgresql://livesell:livesell@localhost:5432/livesell_test?schema=public
+      DATABASE_URL: postgresql://livesell:livesell@localhost:5432/livesell_test?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
