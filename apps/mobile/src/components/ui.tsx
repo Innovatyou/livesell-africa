@@ -233,15 +233,15 @@ export function Hero({ children, style }: { children: React.ReactNode; style?: V
   );
 }
 
-/** Search box with icon and clear button. Searches on submit (or as you type when `live`). */
-export function SearchBar({ value, onChangeText, onSubmit, placeholder }: { value: string; onChangeText: (v: string) => void; onSubmit?: () => void; placeholder: string }) {
+/** Search box with icon and clear button. `onSubmit` gets the text to search for ("" when cleared). */
+export function SearchBar({ value, onChangeText, onSubmit, placeholder }: { value: string; onChangeText: (v: string) => void; onSubmit?: (v: string) => void; placeholder: string }) {
   useTheme();
   return (
     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 46, borderRadius: 14, paddingHorizontal: 12, backgroundColor: c.surface }, depth(0)]}>
       <Ionicons name="search" size={18} color={c.ink3} />
-      <TextInput value={value} onChangeText={onChangeText} onSubmitEditing={onSubmit} placeholder={placeholder} placeholderTextColor={c.ink3} returnKeyType="search" accessibilityLabel={placeholder}
+      <TextInput value={value} onChangeText={onChangeText} onSubmitEditing={() => onSubmit?.(value.trim())} placeholder={placeholder} placeholderTextColor={c.ink3} returnKeyType="search" accessibilityLabel={placeholder}
         style={{ flex: 1, color: c.ink, fontSize: 15, paddingVertical: 10 }} autoCapitalize="none" autoCorrect={false} />
-      {value ? <Pressable onPress={() => { onChangeText(''); setTimeout(() => onSubmit?.(), 0); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search"><Ionicons name="close-circle" size={18} color={c.ink3} /></Pressable> : null}
+      {value ? <Pressable onPress={() => { onChangeText(''); onSubmit?.(''); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search"><Ionicons name="close-circle" size={18} color={c.ink3} /></Pressable> : null}
     </View>
   );
 }

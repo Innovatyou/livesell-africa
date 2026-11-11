@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Avatar, Badge, Card, Chips, Empty, ErrorBox, ListRow, Loading, Muted, Screen, SearchBar, c } from '@/components/ui';
 import { useApi, useAuth } from '@/lib/auth';
@@ -14,13 +14,15 @@ export default function Orders() {
   const { can } = useAuth();
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState(params.view ?? '');
+  // Coming from a Today tile (/orders?view=…) while this tab is already open: follow the requested view.
+  useEffect(() => { if (params.view !== undefined) setView(params.view); }, [params.view]);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const qs = new URLSearchParams({ pageSize: '50', ...(view ? { view } : {}), ...(query ? { search: query } : {}) }).toString();
   const res = useApi<{ items: Item[]; total: number }>(`/orders?${qs}`);
   return (
     <Screen refreshing={res.loading} onRefresh={res.reload}>
-      <SearchBar value={search} onChangeText={setSearch} onSubmit={() => setQuery(search.trim())} placeholder="Order no., customer or phone" />
+      <SearchBar value={search} onChangeText={setSearch} onSubmit={setQuery} placeholder="Order no., customer or phone" />
       <Chips label="Order views" value={view} onChange={setView} options={VIEWS} />
       {res.error ? <ErrorBox message={res.error} onRetry={res.reload} />
         : !res.data ? <Loading />

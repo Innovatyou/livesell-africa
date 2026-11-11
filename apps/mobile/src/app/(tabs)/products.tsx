@@ -20,7 +20,7 @@ export default function Products() {
   return (
     <Screen refreshing={res.loading} onRefresh={res.reload}>
       {can('products:write') ? <Button title="Add product" icon="add" onPress={() => router.push('/products/new')} /> : null}
-      <SearchBar value={search} onChangeText={setSearch} onSubmit={() => setQuery(search.trim())} placeholder="Name or code (BAG001)" />
+      <SearchBar value={search} onChangeText={setSearch} onSubmit={setQuery} placeholder="Name or code (BAG001)" />
       <Chips label="Stock filter" value={stock} onChange={setStock} options={[['', 'All'], ['low', 'Running low'], ['out', 'Sold out']]} />
       {res.error ? <ErrorBox message={res.error} onRetry={res.reload} />
         : !res.data ? <Loading />
